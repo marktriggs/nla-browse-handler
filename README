@@ -1,0 +1,149 @@
+
+       Care and feeding of the NLA Solr browse request handler
+
+			     Mark Triggs
+
+	       The National Library of Australia, 2009
+
+
+0.  Background
+
+ This Solr plugin was developed to support the browse functionality of
+ the National Library of Australia's Catalogue
+ (http://catalogue.nla.gov.au).  Please read the LICENSE file that
+ accompanies this file for details regarding the distribution of this
+ software.
+
+
+
+1.  Compiling it
+
+ You'll need Ant to get everything compiled.  Edit the build.xml file
+ and set the 'solrpath' property to the location of your Solr
+ installation. Once you've done that, running:
+
+   ant jars
+
+ should give you the two required jar files:
+
+   browse-handler.jar
+   browse-indexing.jar
+
+  
+
+2.  Creating your browse indexes
+
+ 2.1.  Index your authority data
+
+  This step creates a Lucene index of the "see also" and "use
+  instead" linkages from the authority data:
+
+    for lib in ../browse-indexing.jar /path/to/solr/lib/lucene-core-2.4-dev.jar ../libs/*.jar; do
+      export CLASSPATH="$CLASSPATH:$lib"
+    done
+
+    java IndexAuth /path/to/a/full/dump/of/your/authority-data.mrc authority.index
+
+
+
+ 2.2.  Create lists of headings for browsing.
+
+  Now we produce a list of the headings we want to browse over.  We want to browse on:
+
+    * Any term that appears in a particular index of our bib data (e.g. subject-browse)
+
+    * Any non-preferred term from our authority index whose preferred
+      form is linked to from our bib data (i.e. appears in the above index).
+
+  The PrintBrowseHeadings class does this: grabs headings from these
+  sources, produces a sort key for each heading and prints out a big
+  file with lines of the form:
+
+    <Sort key>^A<Heading>
+
+  Running it:
+
+    java PrintBrowseHeadings /path/to/your/bib/data/index subject-browse authority.index subjects.tmp
+    java PrintBrowseHeadings /path/to/your/bib/data/index author-browse authority.index names.tmp
+
+
+  Next we just need to remove any duplicates.  I do this using the GNU
+  sort program from the command-line because it's amazingly fast even on
+  big files:
+
+    sort -T /var/tmp -u --field-separator=$'\1' -k1 subjects.tmp -o sorted-subjects.tmp
+    sort -T /var/tmp -u --field-separator=$'\1' -k1 names.tmp -o sorted-names.tmp
+
+
+
+ 2.3.  Creating the SQLite DB
+
+  The last step is to load all the headings into an SQLite database
+  (which acts as the browse index, effectively).  CreateBrowseSQLite
+  does this:
+
+    java CreateBrowseSQLite sorted-names.tmp namesbrowse.db
+    java CreateBrowseSQLite sorted-subjects.tmp subjectsbrowse.db
+
+
+  And that's the indexing process.  At the end of this you should have
+  one SQLite database per browse type, and an index of your authority
+  data.  Everything else is disposable!
+
+
+
+
+3.  Configuring Solr
+
+ 3.1.  Jar files
+
+  Now that we've got our indexes built, we just need to configure the
+  Browse request handler to use them.  Start by copying the
+  browse-handler and SQLite jars to somewhere Solr can find then:
+
+    cp browse-handler.jar solr/apache-solr-1.3.0/example/lib/
+    cp libs/sqlite*.jar solr/apache-solr-1.3.0/example/lib/
+
+
+
+ 3.2.  Solr configuration
+
+  Then configure your browse types in solrconfig.xml:
+
+    <requestHandler name="/browse" class="au.gov.nla.solr.handler.BrowseRequestHandler">
+       <str name="authIndexPath">/path/to/your/authority.index</str>
+       <str name="bibIndexPath">/path/to/your/bib/data/index</str>
+
+       <str name="sources">names,subjects</str>
+
+       <lst name="names">
+	 <str name="DBpath">/path/to/your/namesbrowse.db</str>
+	 <str name="field">author-browse</str>
+       </lst>
+
+       <lst name="subjects">
+	 <str name="DBpath">/path/to/your/subjectsbrowse.db</str>
+	 <str name="field">subject-browse</str>
+       </lst>
+    </requestHandler>
+
+
+
+ 3.3.  Testing
+
+  Finally, start up Solr and test that things are working:
+
+    http://yourhost.example.com:8080/solr/browse?source=subjects&from=boats&rows=20
+
+
+
+4.  Running updates
+
+ At the time of writing we are updating our authority and browse
+ indexes once per night at the same time we update our bib indexes.
+ The browse request handler has been designed to automatically detect
+ updates to these indexes and reloads them as required.  The steps are
+ simple:
+
+   mv mybrowse.db mybrowse.db.old;  mv mybrowse.db.new mybrowse.db
+   my authority.index authority.index.old; mv authority.index.new authority.index
