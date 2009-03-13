@@ -99,10 +99,10 @@
 
   Now that we've got our indexes built, we just need to configure the
   Browse request handler to use them.  Start by copying the
-  browse-handler and SQLite jars to somewhere Solr can find then:
+  browse-handler and SQLite jars to somewhere Solr can find them:
 
-    cp browse-handler.jar solr/apache-solr-1.3.0/example/lib/
-    cp libs/sqlite*.jar solr/apache-solr-1.3.0/example/lib/
+    cp browse-handler.jar solr/WEB-INF/lib
+    cp libs/sqlite*.jar solr/WEB-INF/lib
 
 
 
