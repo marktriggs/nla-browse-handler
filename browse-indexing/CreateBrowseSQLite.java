@@ -19,7 +19,7 @@ class CreateBrowseSQLite
         int count = 0;
         String heading;
 
-        outputDB.setAutoCommit(false);
+        outputDB.setAutoCommit (false);
 
         PreparedStatement prep = outputDB.prepareStatement (
             "insert or ignore into all_headings (key, heading) values (?, ?)");
@@ -52,7 +52,7 @@ class CreateBrowseSQLite
     private void setupDatabase ()
         throws Exception
     {
-        Statement stat = outputDB.createStatement();
+        Statement stat = outputDB.createStatement ();
 
         stat.executeUpdate ("drop table if exists all_headings;");
         stat.executeUpdate ("create table all_headings (key, heading);");
@@ -66,7 +66,7 @@ class CreateBrowseSQLite
     private void buildOrderedTables ()
         throws Exception
     {
-        Statement stat = outputDB.createStatement();
+        Statement stat = outputDB.createStatement ();
 
         stat.executeUpdate ("drop table if exists headings;");
         stat.executeUpdate ("create table headings " +
@@ -81,8 +81,8 @@ class CreateBrowseSQLite
     public void create (String headingsFile, String outputPath)
         throws Exception
     {
-        Class.forName("org.sqlite.JDBC");
-        outputDB = DriverManager.getConnection("jdbc:sqlite:" + outputPath);
+        Class.forName ("org.sqlite.JDBC");
+        outputDB = DriverManager.getConnection ("jdbc:sqlite:" + outputPath);
 
         setupDatabase ();
 

@@ -21,8 +21,6 @@ class PrintBrowseHeadings
 
     private String luceneField;
 
-
-
     private DiacriticStripper ds = new DiacriticStripper ();
 
     private Pattern junkregexp =
@@ -36,8 +34,8 @@ class PrintBrowseHeadings
                                            .replace ("(", "")
                                            .replace (")", "")
                                            .replace ("-", " ")))
-            .replaceAll ("")
-            .replaceAll (" +", " ");
+                         .replaceAll ("")
+                         .replaceAll (" +", " ");
     }
 
 

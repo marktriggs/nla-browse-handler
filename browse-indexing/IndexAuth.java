@@ -13,12 +13,21 @@ import org.marc4j.marc.*;
 
 class IndexAuth
 {
-    private static Pattern trailingPunctuationRegexp = Pattern.compile ("[, ./;]+$");
-    private static Pattern leadingPunctuationRegexp = Pattern.compile ("^[, ./;]+");
+    private static Pattern trailingPunctuationRegexp =
+        Pattern.compile ("[, ./;]+$");
+
+    private static Pattern leadingPunctuationRegexp =
+        Pattern.compile ("^[, ./;]+");
+
 
     private static String clean (String text)
     {
-        return leadingPunctuationRegexp.matcher (trailingPunctuationRegexp.matcher (text).replaceAll ("")).replaceAll ("");
+        String s = text;
+
+        s = trailingPunctuationRegexp.matcher (s).replaceAll ("");
+        s = leadingPunctuationRegexp.matcher (s).replaceAll ("");
+
+        return s;
     }
 
 
@@ -54,10 +63,10 @@ class IndexAuth
                     StringBuffer sb = new StringBuffer ();
 
                     List subfields = f.getSubfields ();
-                    Iterator i = subfields.iterator();
+                    Iterator i = subfields.iterator ();
 
                     while (i.hasNext ()) {
-                        Subfield subfield = (Subfield) i.next();
+                        Subfield subfield = (Subfield) i.next ();
 
                         if (subfield.getCode () == 'w') {
                             continue;
@@ -70,17 +79,19 @@ class IndexAuth
                             sb.append ("-- ");
                         }
 
-                        sb.append (subfield.getData());
+                        sb.append (subfield.getData ());
                         sb.append (" ");
                     }
 
-                    doc.add (new Field (field, clean (sb.toString ()),
+                    doc.add (new Field (field,
+                                        clean (sb.toString ()),
                                         Field.Store.YES,
                                         Field.Index.UN_TOKENIZED));
                 }
             }
 
-            doc.add (new Field ("collection" , "Authority",
+            doc.add (new Field ("collection",
+                                "Authority",
                                 Field.Store.NO,
                                 Field.Index.UN_TOKENIZED));
 

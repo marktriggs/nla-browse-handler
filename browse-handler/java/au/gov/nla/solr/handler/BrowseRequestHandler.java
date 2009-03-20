@@ -27,7 +27,7 @@ class Log
     {
         // Caller's class
         return Logger.getLogger
-            (new Throwable().getStackTrace()[2].getClassName());
+            (new Throwable ().getStackTrace ()[2].getClassName ());
     }
 
 
@@ -60,10 +60,10 @@ class HeadingsDB
 
 
     private void openDB () throws Exception
-    {        
-        Class.forName("org.sqlite.JDBC");
+    {
+        Class.forName ("org.sqlite.JDBC");
 
-        db = DriverManager.getConnection("jdbc:sqlite:" + path);
+        db = DriverManager.getConnection ("jdbc:sqlite:" + path);
         dbVersion = currentVersion ();
     }
 
@@ -101,8 +101,7 @@ class HeadingsDB
     }
 
 
-    public HeadingSlice getHeadings (int rowid,
-                                     int rows)
+    public HeadingSlice getHeadings (int rowid, int rows)
         throws Exception
     {
         HeadingSlice result = new HeadingSlice ();
@@ -208,7 +207,7 @@ class AuthDB extends LuceneDB
 
     public List<Document> getPreferredHeadings (String heading)
         throws Exception
-    {   
+    {
         Hits results = (searcher.search
                         (new TermQuery (new Term ("insteadOf", heading))));
 
@@ -355,7 +354,8 @@ class Browse
                 item.note = value;
             }
         } else {
-            List<Document> preferredHeadings = authDB.getPreferredHeadings (item.heading);
+            List<Document> preferredHeadings =
+                authDB.getPreferredHeadings (item.heading);
 
             for (Document doc : preferredHeadings) {
                 for (String value : docValues (doc, "preferred")) {
@@ -438,21 +438,23 @@ public class BrowseRequestHandler extends RequestHandlerBase
     }
 
 
-    public void init(NamedList args) {
-        super.init(args);
+    public void init (NamedList args)
+    {
+        super.init (args);
 
         SolrParams p = SolrParams.toSolrParams (args);
 
         authPath = asAbsFile (p.get ("authIndexPath"));
         bibPath = asAbsFile (p.get ("bibIndexPath"));
 
-        sources = new HashMap<String,BrowseSource> ();
+        sources = new HashMap<String, BrowseSource> ();
 
         for (String source : Arrays.asList (p.get ("sources").split (","))) {
             NamedList<String> entry = (NamedList<String>)args.get (source);
 
             sources.put (source,
-                         new BrowseSource (entry.get ("DBpath"), entry.get ("field")));
+                         new BrowseSource (entry.get ("DBpath"),
+                                           entry.get ("field")));
         }
     }
 
@@ -489,20 +491,22 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
 
 
-    public void handleRequestBody(SolrQueryRequest req,
-                                  SolrQueryResponse rsp)
+    public void handleRequestBody (SolrQueryRequest req,
+                                   SolrQueryResponse rsp)
         throws Exception
     {
-        SolrParams p = req.getParams();
-        String sourceName = p.get("source");
-        String from = p.get("from");
+        SolrParams p = req.getParams ();
+        String sourceName = p.get ("source");
+        String from = p.get ("from");
         int rowid = 1;
-        if (p.get("rowid") != null) {
-            rowid = asInt (p.get("rowid"));
-        }
-        int rows = asInt (p.get("rows"));
 
-        int offset = (p.get("offset") != null) ? asInt (p.get("offset")) : 0;
+        if (p.get ("rowid") != null) {
+            rowid = asInt (p.get ("rowid"));
+        }
+
+        int rows = asInt (p.get ("rows"));
+
+        int offset = (p.get ("offset") != null) ? asInt (p.get ("offset")) : 0;
 
         if (rows < 0) {
             throw new Exception ("Invalid value for parameter: rows");
@@ -530,7 +534,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
         Log.info ("Browsing from: " + rowid);
 
-        BrowseList list = source.browse.getList (rowid, offset,rows);
+        BrowseList list = source.browse.getList (rowid, offset, rows);
 
         Map<String,Object> result = new HashMap<String, Object> ();
 
@@ -545,23 +549,23 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
     //////////////////////// SolrInfoMBeans methods //////////////////////
 
-    public String getVersion() {
+    public String getVersion () {
         return "$Revision: 0.1 $";
     }
 
-    public String getDescription() {
+    public String getDescription () {
         return "NLA browse handler";
     }
 
-    public String getSourceId() {
+    public String getSourceId () {
         return "";
     }
 
-    public String getSource() {
+    public String getSource () {
         return "";
     }
 
-    public URL[] getDocs() {
+    public URL[] getDocs () {
         return null;
     }
 }
