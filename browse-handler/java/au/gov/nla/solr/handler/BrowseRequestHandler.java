@@ -49,6 +49,7 @@ class HeadingsDB
     Connection db;
     String path;
     long dbVersion;
+    int totalCount;
 
 
     public HeadingsDB (String path) throws Exception
@@ -65,6 +66,17 @@ class HeadingsDB
 
         db = DriverManager.getConnection ("jdbc:sqlite:" + path);
         dbVersion = currentVersion ();
+
+        PreparedStatement countStmnt = db.prepareStatement (
+            "select count(1) as count from headings");
+
+        ResultSet rs = countStmnt.executeQuery ();
+        rs.next ();
+
+        totalCount = rs.getInt ("count");
+
+        rs.close ();
+        countStmnt.close ();
     }
 
 
@@ -116,38 +128,69 @@ class HeadingsDB
 
         rowStmnt.setInt (1, rowid);
 
-        ResultSet rs = rowStmnt.executeQuery ();
+        ResultSet rs = null;
+
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                rs = rowStmnt.executeQuery ();
+                break;
+            } catch (SQLException e) {
+                Log.info ("Retry number " + attempt + "...");
+                Thread.sleep (50);
+            }
+        }
+
+        if (rs == null) {
+            return result;
+        }
 
         while (rs.next ()) {
             result.headings.add (rs.getString ("heading"));
         }
 
+        rs.close ();
+        rowStmnt.close ();
 
-        PreparedStatement countStmnt = db.prepareStatement (
-            "select count(1) as count from headings where rowid >= ?");
-
-        countStmnt.setInt (1, rowid);
-
-        rs = countStmnt.executeQuery ();
-        rs.next ();
-        result.total = rs.getInt ("count");
-
+        result.total = (totalCount - rowid) + 1;
 
         return result;
     }
 }
 
 
-abstract class LuceneDB
+class LuceneDB
 {
+    static Map<String,LuceneDB> dbs = new HashMap<String,LuceneDB> ();
+
     IndexSearcher searcher;
     String dbpath;
     long currentVersion = -1;
 
+
+    public synchronized static LuceneDB getOrCreate (String path)
+        throws Exception
+    {
+        if (!dbs.containsKey (path)) {
+            LuceneDB db = new LuceneDB (path);
+            dbs.put (path, db);
+        }
+
+        return dbs.get (path);
+    }
+
+
+    public synchronized static void reopenAllIfUpdated ()
+        throws Exception
+    {
+        for (LuceneDB db : dbs.values ()) {
+            db.reopenIfUpdated ();
+        }
+    }
+
+
     public LuceneDB (String path) throws Exception
     {
-        dbpath = path;
-        openSearcher ();
+        this.dbpath = path;
     }
 
 
@@ -162,6 +205,11 @@ abstract class LuceneDB
     }
 
 
+    public Hits search (Query q) throws Exception
+    {
+        return searcher.search (q);
+    }
+
     private long indexVersion ()
     {
         return new File (dbpath + "/segments.gen").lastModified ();
@@ -174,7 +222,7 @@ abstract class LuceneDB
     }
 
 
-    public void reopenIfUpdated () throws Exception
+    public synchronized void reopenIfUpdated () throws Exception
     {
         if (isDBUpdated ()) {
             openSearcher ();
@@ -185,17 +233,26 @@ abstract class LuceneDB
 
 
 
-class AuthDB extends LuceneDB
+class AuthDB
 {
+    private LuceneDB db;
+
     public AuthDB (String path) throws Exception
     {
-        super (path);
+        db = LuceneDB.getOrCreate (path);
     }
+
+
+    public void reopenIfUpdated () throws Exception
+    {
+        db.reopenIfUpdated ();
+    }
+
 
     public Document getAuthorityRecord (String heading)
         throws Exception
     {
-        Hits results = (searcher.search
+        Hits results = (db.search
                         (new TermQuery (new Term ("preferred", heading))));
 
         if (results.length () > 0) {
@@ -207,8 +264,8 @@ class AuthDB extends LuceneDB
 
     public List<Document> getPreferredHeadings (String heading)
         throws Exception
-    {
-        Hits results = (searcher.search
+    {   
+        Hits results = (db.search
                         (new TermQuery (new Term ("insteadOf", heading))));
 
         List<Document> result = new Vector<Document> ();
@@ -225,24 +282,52 @@ class AuthDB extends LuceneDB
 }
 
 
-class BibDB extends LuceneDB
+class BibDB
 {
+    private LuceneDB db;
     private String field;
 
     public BibDB (String path, String field) throws Exception
     {
-        super (path);
+        db = LuceneDB.getOrCreate (path);
         this.field = field;
     }
+
+
+    public void reopenIfUpdated () throws Exception
+    {
+        db.reopenIfUpdated ();
+    }
+
 
     public int recordCount (String heading)
         throws Exception
     {
         TermQuery q = new TermQuery (new Term (field, heading));
 
-        Hits results = searcher.search (q);
+        Hits results = db.search (q);
 
         return results.length ();
+    }
+
+
+    public List<Integer> matchingIDs (String heading)
+        throws Exception
+    {
+        TermQuery q = new TermQuery (new Term (field, heading));
+
+        Hits results = db.search (q);
+
+        List<Integer> ids = new Vector<Integer> ();
+
+        for (int i = 0; i < results.length (); i++) {
+            Document doc = results.doc (i);
+            String[] vals = doc.getValues ("id");
+
+            ids.add (new Integer (vals[0]));
+        }
+
+        return ids;
     }
 }
 
@@ -273,6 +358,7 @@ class BrowseItem
     public List<String> useInstead = new LinkedList<String> ();
     public String note = "";
     public String heading;
+    public List<Integer> ids;
     int count;
 
     public BrowseItem (String heading)
@@ -290,6 +376,7 @@ class BrowseItem
         result.put ("useInstead", useInstead);
         result.put ("note", note);
         result.put ("count", new Integer (count));
+        result.put ("ids", ids);
 
         return result;
     }
@@ -336,7 +423,9 @@ class Browse
     {
         Log.info ("Populating: " + item.heading);
 
-        item.count = bibDB.recordCount (item.heading);
+        List<Integer> ids = bibDB.matchingIDs (item.heading);
+        item.ids = ids;
+        item.count = ids.size ();
 
         Document authInfo = authDB.getAuthorityRecord (item.heading);
 
@@ -403,14 +492,21 @@ class BrowseSource
 {
     public String DBpath;
     public String field;
+    public String ignoreDiacritics;
+    public String dropChars;
 
     public Browse browse;
 
 
-    public BrowseSource (String DBpath, String field)
+    public BrowseSource (String DBpath,
+                         String field,
+                         String ignoreDiacritics,
+                         String dropChars)
     {
         this.DBpath = DBpath;
         this.field = field;
+        this.ignoreDiacritics = ignoreDiacritics;
+        this.dropChars = dropChars;
     }
 }
 
@@ -454,7 +550,9 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
             sources.put (source,
                          new BrowseSource (entry.get ("DBpath"),
-                                           entry.get ("field")));
+                                           entry.get ("field"),
+                                           entry.get ("ignoreDiacritics"),
+                                           entry.get ("dropChars")));
         }
     }
 
@@ -478,13 +576,24 @@ public class BrowseRequestHandler extends RequestHandlerBase
     }
 
 
-    private String clean (String s)
+    private String clean (String s, boolean ignoreDiacritics, String dropChars)
     {
-        String cleaned = s.replaceAll ("[\\[\\]\\(\\)',\\.]", "");
+        String cleaned = s;
+
+        if (dropChars != null) {
+            for (int i = 0; i < dropChars.length (); i++) {
+                cleaned = cleaned.replace (String.valueOf
+                                           (dropChars.charAt (i)),
+                                           "");
+            }
+        }
+
         cleaned = cleaned.replaceAll ("-", " ");
         cleaned = cleaned.replaceAll (" +", " ");
 
-        cleaned = handle_diacritics (cleaned);
+        if (!ignoreDiacritics) {
+            cleaned = handle_diacritics (cleaned);
+        }
 
         return cleaned.toLowerCase ();
     }
@@ -496,10 +605,17 @@ public class BrowseRequestHandler extends RequestHandlerBase
         throws Exception
     {
         SolrParams p = req.getParams ();
+
+        if (p.get ("reopen") != null) {
+            LuceneDB.reopenAllIfUpdated ();
+            return;
+        }
+
+
         String sourceName = p.get ("source");
         String from = p.get ("from");
-        int rowid = 1;
 
+        int rowid = 1;
         if (p.get ("rowid") != null) {
             rowid = asInt (p.get ("rowid"));
         }
@@ -528,7 +644,12 @@ public class BrowseRequestHandler extends RequestHandlerBase
         source.browse.reopenDatabasesIfUpdated ();
 
         if (from != null) {
-            rowid = source.browse.getId (clean (from));
+            rowid = source.browse.getId
+                (clean
+                 (from,
+                  (source.ignoreDiacritics != null &&
+                   source.ignoreDiacritics.equals ("yes")),
+                  source.dropChars));
         }
 
 
