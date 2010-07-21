@@ -1,8 +1,6 @@
 // Stolen verbatim from Simon Jacob.
 
 
-package au.gov.nla.solr.handler;
-
 import java.util.*;
 import java.text.*;
 
