@@ -33,12 +33,17 @@
 
 2.  Creating your browse indexes
 
+ Note: All of the following examples assume you're using Java 1.6 and that your
+       Java classpath is set as follows:
+
+   export CLASSPATH="*:/path/to/solr/lib/*:libs/*"
+
  2.1.  Index your authority data
 
   This step creates a Lucene index of the "see also" and "use
   instead" linkages from the authority data:
 
-    java -cp "../browse-indexing.jar:/path/to/solr/lib/*:../libs/*" IndexAuth /path/to/a/full/dump/of/your/authority-data.mrc authority.index
+    java IndexAuth /path/to/a/full/dump/of/your/authority-data.mrc authority.index
 
 
 
