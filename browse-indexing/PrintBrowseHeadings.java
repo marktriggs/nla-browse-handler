@@ -11,32 +11,19 @@ import org.apache.lucene.index.*;
 import org.apache.lucene.document.*;
 
 import java.sql.*;
-import au.gov.nla.solr.handler.DiacriticStripper;
+
 
 
 class PrintBrowseHeadings
 {
+    private Leech bibLeech;
+    private Leech authLeech;
+    private Leech nonprefAuthLeech;
+
     IndexSearcher bibSearcher;
     IndexSearcher authSearcher;
 
     private String luceneField;
-
-    private DiacriticStripper ds = new DiacriticStripper ();
-
-    private Pattern junkregexp =
-        Pattern.compile ("\\([^a-z0-9\\p{L} ]\\)");
-
-
-    private String normalise (String text)
-    {
-        return junkregexp.matcher (ds.fix (text
-                                           .toLowerCase ()
-                                           .replace ("(", "")
-                                           .replace (")", "")
-                                           .replace ("-", " ")))
-                         .replaceAll ("")
-                         .replaceAll (" +", " ");
-    }
 
 
     private void loadHeadings (Leech leech,
@@ -46,13 +33,28 @@ class PrintBrowseHeadings
     {
         String heading;
 
+        Normaliser normaliser;
+
+        if (System.getenv ("NORMALISER") != null) {
+            String normaliserClass = System.getenv ("NORMALISER");
+
+            normaliser = (Normaliser) (Class.forName (normaliserClass)
+                        .getConstructor ()
+                        .newInstance ());
+        } else {
+            normaliser = new Normaliser ();
+        }
+
         while ((heading = leech.next ()) != null) {
             if (predicate != null &&
                 !predicate.isSatisfiedBy (heading)) {
                 continue;
             }
 
-            out.println (normalise (heading) + "\1" + heading);
+            String norm = normaliser.normalise (heading);
+            if (norm != null) {
+                out.println (normaliser.normalise (heading) + "\1" + heading);
+            }
         }
     }
 
@@ -112,9 +114,6 @@ class PrintBrowseHeadings
                         String outFile)
         throws Exception
     {
-        Leech bibLeech;
-        Leech nonprefAuthLeech;
-
         bibLeech = getBibLeech (bibPath, luceneField);
         this.luceneField = luceneField;
 
@@ -123,9 +122,24 @@ class PrintBrowseHeadings
         PrintWriter out = new PrintWriter (new FileWriter (outFile));
 
         if (authPath != null) {
+            authLeech = new Leech (authPath, "preferred");
             nonprefAuthLeech = new Leech (authPath, "insteadOf");
 
             authSearcher = new IndexSearcher (authPath);
+
+            loadHeadings (authLeech, out,
+                          new Predicate () {
+                              public boolean isSatisfiedBy (Object obj)
+                              {
+                                  String heading = (String) obj;
+
+                                  try {
+                                      return (bibCount (heading) > 0);
+                                  } catch (IOException e) {
+                                      return true;
+                                  }
+                              }
+                          });
 
             loadHeadings (nonprefAuthLeech, out,
                           new Predicate () {
@@ -141,7 +155,7 @@ class PrintBrowseHeadings
                               }}
                 );
 
-            nonprefAuthLeech.dropOff ();
+            authLeech.dropOff ();
         }
 
         loadHeadings (bibLeech, out, null);
