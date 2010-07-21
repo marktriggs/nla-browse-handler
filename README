@@ -38,11 +38,7 @@
   This step creates a Lucene index of the "see also" and "use
   instead" linkages from the authority data:
 
-    for lib in ../browse-indexing.jar /path/to/solr/lib/lucene-core-2.4-dev.jar ../libs/*.jar; do
-      export CLASSPATH="$CLASSPATH:$lib"
-    done
-
-    java IndexAuth /path/to/a/full/dump/of/your/authority-data.mrc authority.index
+    java -cp "../browse-indexing.jar:/path/to/solr/lib/*:../libs/*" IndexAuth /path/to/a/full/dump/of/your/authority-data.mrc authority.index
 
 
 
