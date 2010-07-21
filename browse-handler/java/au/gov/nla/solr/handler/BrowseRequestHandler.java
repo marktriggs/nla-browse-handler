@@ -107,13 +107,16 @@ class HeadingsDB
 
         ResultSet rs = rowStmnt.executeQuery ();
 
-        rs.next ();
-
+        if (rs.next ()) {
         return rs.getInt ("rowid");
+        } else {
+            return totalCount + 1;   // past the end
+        }
     }
 
 
-    public HeadingSlice getHeadings (int rowid, int rows)
+    public HeadingSlice getHeadings (int rowid,
+                                     int rows)
         throws Exception
     {
         HeadingSlice result = new HeadingSlice ();
@@ -588,6 +591,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
             }
         }
 
+        cleaned = cleaned.replaceAll ("[\\(\\)]", "");
         cleaned = cleaned.replaceAll ("-", " ");
         cleaned = cleaned.replaceAll (" +", " ");
 
