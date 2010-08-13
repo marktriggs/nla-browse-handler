@@ -16,6 +16,7 @@ import java.util.*;
 import java.net.URL;
 import java.sql.*;
 
+import au.gov.nla.util.*;
 import org.apache.lucene.search.*;
 import org.apache.lucene.document.*;
 import java.util.logging.Logger;
@@ -161,6 +162,7 @@ class HeadingsDB
 }
 
 
+
 class LuceneDB
 {
     static Map<String,LuceneDB> dbs = new HashMap<String,LuceneDB> ();
@@ -239,10 +241,35 @@ class LuceneDB
 class AuthDB
 {
     private LuceneDB db;
+    private String preferredHeadingField;
+    private String useInsteadHeadingField;
+    private String seeAlsoHeadingField;
+    private String scopeNoteField;
 
-    public AuthDB (String path) throws Exception
+    public AuthDB (String path,
+                   String preferredField,
+                   String useInsteadField,
+                   String seeAlsoField,
+                   String noteField)
+        throws Exception
     {
         db = LuceneDB.getOrCreate (path);
+        preferredHeadingField = preferredField;
+        useInsteadHeadingField = useInsteadField;
+        seeAlsoHeadingField = seeAlsoField;
+        scopeNoteField = noteField;
+    }
+
+
+    private List<String> docValues (Document doc, String field)
+    {
+        String values[] = doc.getValues (field);
+
+        if (values == null) {
+            values = new String[] {};
+        }
+
+        return Arrays.asList (values);
     }
 
 
@@ -256,7 +283,8 @@ class AuthDB
         throws Exception
     {
         Hits results = (db.search
-                        (new TermQuery (new Term ("preferred", heading))));
+                        (new TermQuery (new Term (preferredHeadingField,
+                                                  heading))));
 
         if (results.length () > 0) {
             return results.doc (0);
@@ -265,11 +293,13 @@ class AuthDB
         }
     }
 
+
     public List<Document> getPreferredHeadings (String heading)
         throws Exception
-    {   
+    {
         Hits results = (db.search
-                        (new TermQuery (new Term ("insteadOf", heading))));
+                        (new TermQuery (new Term (useInsteadHeadingField,
+                                                  heading))));
 
         List<Document> result = new Vector<Document> ();
 
@@ -282,24 +312,55 @@ class AuthDB
 
         return result;
     }
+
+
+    public Map<String, List<String>> getFields (String heading)
+        throws Exception
+    {
+        Document authInfo = getAuthorityRecord (heading);
+
+        Map<String, List<String>> itemValues =
+            new HashMap<String,List<String>> ();
+
+        itemValues.put ("seeAlso", new ArrayList<String>());
+        itemValues.put ("useInstead", new ArrayList<String>());
+        itemValues.put ("note", new ArrayList<String>());
+
+        if (authInfo != null) {
+            for (String value : docValues (authInfo, seeAlsoHeadingField)) {
+                itemValues.get ("seeAlso").add (value);
+            }
+
+            for (String value : docValues (authInfo, scopeNoteField)) {
+                itemValues.get ("note").add (value);
+            }
+        } else {
+            List<Document> preferredHeadings =
+                getPreferredHeadings (heading);
+
+            for (Document doc : preferredHeadings) {
+                for (String value : docValues (doc, preferredHeadingField)) {
+                    itemValues.get ("useInstead").add (value);
+                }
+            }
+        }
+
+        return itemValues;
+    }
 }
+
 
 
 class BibDB
 {
-    private LuceneDB db;
+    private IndexSearcher db;
     private String field;
 
-    public BibDB (String path, String field) throws Exception
+
+    public BibDB (IndexSearcher searcher, String field) throws Exception
     {
-        db = LuceneDB.getOrCreate (path);
+        db = searcher;
         this.field = field;
-    }
-
-
-    public void reopenIfUpdated () throws Exception
-    {
-        db.reopenIfUpdated ();
     }
 
 
@@ -355,6 +416,7 @@ class BrowseList
 }
 
 
+
 class BrowseItem
 {
     public List<String> seeAlso = new LinkedList<String> ();
@@ -363,6 +425,7 @@ class BrowseItem
     public String heading;
     public List<Integer> ids;
     int count;
+
 
     public BrowseItem (String heading)
     {
@@ -394,11 +457,17 @@ class Browse
     private AuthDB authDB;
     private BibDB bibDB;
 
-    public Browse (HeadingsDB headings, AuthDB auth, BibDB bibs)
+
+    public Browse (HeadingsDB headings, AuthDB auth)
     {
         headingsDB = headings;
         authDB = auth;
-        bibDB = bibs;
+    }
+
+
+    public void setBibDB (BibDB b)
+    {
+        this.bibDB = b;
     }
 
 
@@ -406,19 +475,6 @@ class Browse
     {
         headingsDB.reopenIfUpdated ();
         authDB.reopenIfUpdated ();
-        bibDB.reopenIfUpdated ();
-    }
-
-
-    private List<String> docValues (Document doc, String field)
-    {
-        String values[] = doc.getValues (field);
-
-        if (values == null) {
-            values = new String[] {};
-        }
-
-        return Arrays.asList (values);
     }
 
 
@@ -430,32 +486,22 @@ class Browse
         item.ids = ids;
         item.count = ids.size ();
 
-        Document authInfo = authDB.getAuthorityRecord (item.heading);
+        Map<String, List<String>> fields = authDB.getFields (item.heading);
 
-        if (authInfo != null) {
-            for (String value : docValues (authInfo, "seeAlso")) {
-                if (bibDB.recordCount (value) > 0) {
-                    Log.info ("Adding: " + value);
-                    item.seeAlso.add (value);
-                } else {
-                    Log.info ("Not adding: " + value);
-                }
+        for (String value : fields.get ("seeAlso")) {
+            if (bibDB.recordCount (value) > 0) {
+                item.seeAlso.add (value);
             }
+        }
 
-            for (String value : docValues (authInfo, "scopenote")) {
-                item.note = value;
+        for (String value : fields.get ("useInstead")) {
+            if (bibDB.recordCount (value) > 0) {
+                item.useInstead.add (value);
             }
-        } else {
-            List<Document> preferredHeadings =
-                authDB.getPreferredHeadings (item.heading);
+        }
 
-            for (Document doc : preferredHeadings) {
-                for (String value : docValues (doc, "preferred")) {
-                    if (bibDB.recordCount (value) > 0) {
-                        item.useInstead.add (value);
-                    }
-                }
-            }
+        for (String value : fields.get ("note")) {
+            item.note = value;
         }
     }
 
@@ -466,9 +512,7 @@ class Browse
     }
 
 
-    public BrowseList getList (int rowid,
-                               int offset,
-                               int rows)
+    public BrowseList getList (int rowid, int offset, int rows)
         throws Exception
     {
         BrowseList result = new BrowseList ();
@@ -489,6 +533,7 @@ class Browse
         return result;
     }
 }
+
 
 
 class BrowseSource
@@ -514,14 +559,15 @@ class BrowseSource
 }
 
 
+
 public class BrowseRequestHandler extends RequestHandlerBase
 {
     private String authPath = null;
     private String bibPath = null;
 
-    private HashMap<String,BrowseSource> sources = new HashMap<String,BrowseSource> ();
+    private Map<String,BrowseSource> sources = new HashMap<String,BrowseSource> ();
 
-    private Browse browse = null;
+    private SolrParams solrParams;
 
 
     private String asAbsFile (String s)
@@ -541,14 +587,15 @@ public class BrowseRequestHandler extends RequestHandlerBase
     {
         super.init (args);
 
-        SolrParams p = SolrParams.toSolrParams (args);
+        solrParams = SolrParams.toSolrParams (args);
 
-        authPath = asAbsFile (p.get ("authIndexPath"));
-        bibPath = asAbsFile (p.get ("bibIndexPath"));
+        authPath = asAbsFile (solrParams.get ("authIndexPath"));
+        bibPath = asAbsFile (solrParams.get ("bibIndexPath"));
 
         sources = new HashMap<String, BrowseSource> ();
 
-        for (String source : Arrays.asList (p.get ("sources").split (","))) {
+        for (String source : Arrays.asList (solrParams.get
+                                            ("sources").split (","))) {
             NamedList<String> entry = (NamedList<String>)args.get (source);
 
             sources.put (source,
@@ -592,6 +639,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
         }
 
         cleaned = cleaned.replaceAll ("[\\(\\)]", "");
+        cleaned = cleaned.replaceAll ("-$", "");
         cleaned = cleaned.replaceAll ("-", " ");
         cleaned = cleaned.replaceAll (" +", " ");
 
@@ -640,20 +688,26 @@ public class BrowseRequestHandler extends RequestHandlerBase
         BrowseSource source = sources.get (sourceName);
 
         if (source.browse == null) {
-            source.browse = new Browse (new HeadingsDB (source.DBpath),
-                                        new AuthDB (authPath),
-                                        new BibDB (bibPath, source.field));
+            source.browse = (new Browse
+                             (new HeadingsDB (source.DBpath),
+                              new AuthDB
+                              (authPath,
+                               solrParams.get ("preferredHeadingField"),
+                               solrParams.get ("useInsteadHeadingField"),
+                               solrParams.get ("seeAlsoHeadingField"),
+                               solrParams.get ("scopeNoteField"))));
         }
 
+        source.browse.setBibDB (new BibDB (req.getSearcher (),
+                                           source.field));
         source.browse.reopenDatabasesIfUpdated ();
 
         if (from != null) {
-            rowid = source.browse.getId
-                (clean
-                 (from,
-                  (source.ignoreDiacritics != null &&
-                   source.ignoreDiacritics.equals ("yes")),
-                  source.dropChars));
+            rowid = (source.browse.getId
+                     (clean (from,
+                             (source.ignoreDiacritics != null &&
+                              source.ignoreDiacritics.equals ("yes")),
+                             source.dropChars)));
         }
 
 

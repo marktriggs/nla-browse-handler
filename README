@@ -18,11 +18,9 @@
 
 1.  Compiling it
 
- You'll need Ant to get everything compiled.  Edit the build.xml file
- and set the 'solrpath' property to the location of your Solr
- installation. Once you've done that, running:
+ You'll need Ant to get everything compiled:
 
-   ant jars
+  ant jars -Dsolr.war=/path/to/my/webapps/solr.war
 
  should give you the two required jar files:
 
@@ -33,18 +31,14 @@
 
 2.  Creating your browse indexes
 
- Note: All of the following examples assume you're using Java 1.6 and that your
-       Java classpath is set as follows:
-
-   export CLASSPATH="*:/path/to/solr/lib/*:libs/*"
-
  2.1.  Index your authority data
 
   This step creates a Lucene index of the "see also" and "use
-  instead" linkages from the authority data:
+  instead" linkages from the authority data.  Note that if you're using VuFind
+  you can stil this step because VuFind has its own authority index we use
+  instead.
 
-    java IndexAuth /path/to/a/full/dump/of/your/authority-data.mrc authority.index
-
+    java -cp browse-indexing.jar IndexAuth /path/to/a/dump/of/your/authority-data.mrc authority-index
 
 
  2.2.  Create lists of headings for browsing.
@@ -64,8 +58,18 @@
 
   Running it:
 
-    java PrintBrowseHeadings /path/to/your/bib/data/index subject-browse authority.index subjects.tmp
-    java PrintBrowseHeadings /path/to/your/bib/data/index author-browse authority.index names.tmp
+    java -cp browse-indexing.jar PrintBrowseHeadings /path/to/your/bib/data/index subject-browse authority.index subjects.tmp
+    java -cp browse-indexing.jar PrintBrowseHeadings /path/to/your/bib/data/index author-browse authority.index names.tmp
+
+  By default this assumes you're using my default field names in your authority index, which are:
+
+    * preferred (1xx)
+    * insteadOf (4xx)
+
+  If you're not, you can provide the field names using Java system properties
+  on the above command lines.  For example, VuFind uses:
+
+    -Dfield.preferred=heading -Dfield.insteadof=use_for
 
 
   Next we just need to remove any duplicates.  I do this using the GNU
@@ -83,8 +87,8 @@
   (which acts as the browse index, effectively).  CreateBrowseSQLite
   does this:
 
-    java CreateBrowseSQLite sorted-names.tmp namesbrowse.db
-    java CreateBrowseSQLite sorted-subjects.tmp subjectsbrowse.db
+    java -cp browse-indexing.jar CreateBrowseSQLite sorted-names.tmp namesbrowse.db
+    java -cp browse-indexing.jar CreateBrowseSQLite sorted-subjects.tmp subjectsbrowse.db
 
 
   And that's the indexing process.  At the end of this you should have
@@ -100,10 +104,9 @@
 
   Now that we've got our indexes built, we just need to configure the
   Browse request handler to use them.  Start by copying the
-  browse-handler and SQLite jars to somewhere Solr can find them:
+  browse-handler to Solr's lib directory.
 
     cp browse-handler.jar solr/WEB-INF/lib
-    cp libs/sqlite*.jar solr/WEB-INF/lib
 
 
 
@@ -116,6 +119,12 @@
        <str name="bibIndexPath">/path/to/your/bib/data/index</str>
 
        <str name="sources">names,subjects</str>
+
+       <!-- These definitions should match the field names used in the authority index. -->
+       <str name="preferredHeadingField">preferred</str>
+       <str name="useInsteadHeadingField">insteadOf</str>
+       <str name="seeAlsoHeadingField">seeAlso</str>
+       <str name="scopeNoteField">scopeNote</str>
 
        <lst name="names">
 	 <str name="DBpath">/path/to/your/namesbrowse.db</str>

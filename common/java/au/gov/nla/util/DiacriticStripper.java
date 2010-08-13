@@ -1,4 +1,5 @@
 // Stolen verbatim from Simon Jacob.
+package au.gov.nla.util;
 
 
 import java.util.*;

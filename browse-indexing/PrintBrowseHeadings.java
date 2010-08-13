@@ -73,7 +73,7 @@ class PrintBrowseHeadings
         throws IOException
     {
         Hits hits = authSearcher.search
-            (new TermQuery (new Term ("insteadOf", heading)));
+            (new TermQuery (new Term (System.getProperty ("field.insteadof", "insteadOf"), heading)));
 
         Iterator it = hits.iterator ();
 
@@ -82,10 +82,15 @@ class PrintBrowseHeadings
 
             Document doc = hit.getDocument ();
 
-            String preferredHeading = doc.getValues ("preferred")[0];
+            String[] preferred = doc.getValues (System.getProperty ("field.preferred", "preferred"));
+            if (preferred.length > 0) {
+                String preferredHeading = preferred[0];
 
-            if (bibCount (preferredHeading) > 0) {
-                return true;
+                if (bibCount (preferredHeading) > 0) {
+                    return true;
+                }
+            } else {
+                return false;
             }
         }
 
@@ -122,24 +127,9 @@ class PrintBrowseHeadings
         PrintWriter out = new PrintWriter (new FileWriter (outFile));
 
         if (authPath != null) {
-            authLeech = new Leech (authPath, "preferred");
-            nonprefAuthLeech = new Leech (authPath, "insteadOf");
+            nonprefAuthLeech = new Leech (authPath, System.getProperty ("field.insteadof", "insteadOf"));
 
             authSearcher = new IndexSearcher (authPath);
-
-            loadHeadings (authLeech, out,
-                          new Predicate () {
-                              public boolean isSatisfiedBy (Object obj)
-                              {
-                                  String heading = (String) obj;
-
-                                  try {
-                                      return (bibCount (heading) > 0);
-                                  } catch (IOException e) {
-                                      return true;
-                                  }
-                              }
-                          });
 
             loadHeadings (nonprefAuthLeech, out,
                           new Predicate () {
@@ -155,7 +145,7 @@ class PrintBrowseHeadings
                               }}
                 );
 
-            authLeech.dropOff ();
+            nonprefAuthLeech.dropOff ();
         }
 
         loadHeadings (bibLeech, out, null);
@@ -171,7 +161,7 @@ class PrintBrowseHeadings
     {
         if (args.length != 3 && args.length != 4) {
             System.err.println
-                ("Usage: PrintBrowseHeadings <bib index> <bib field>"
+                ("Usage: PrintBrowseHeadings <bib index> <bib field> "
                  + "<auth index> <out file>");
             System.err.println ("\nor:\n");
             System.err.println

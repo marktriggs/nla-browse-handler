@@ -1,16 +1,25 @@
 <project name="nla-browse-handler" default="build" basedir=".">
 
-  <property name="solrpath" location="solr"/>
   <property name="builddir" location="build"/>
+  <property name="build.sysclasspath" value="last"/>
+  <property name="solr.war" value="../solr/jetty/webapps/solr.war"/>
+  <property name="solr.dir" value="../solr/jetty/webapps/solr/"/>
 
   <path id="classpath">
     <pathelement location="${builddir}/common"/>
-    <fileset dir="libs"><include name="*.jar"/></fileset>
-    <fileset dir="${solrpath}"><include name="**/*.jar"/></fileset>
+    <fileset dir="${builddir}/deps/"><include name="**/*.jar"/></fileset>
+    <fileset dir="libs"><include name="**/*.jar"/></fileset>
+    <fileset erroronmissingdir="false" dir="${solr.dir}"><include name="**/*.jar"/></fileset>
   </path>
 
   <target name="setup">
     <mkdir dir="${builddir}"/>
+    <mkdir dir="${builddir}/deps"/>
+    <antcall target="setup-solr-war"/>
+  </target>
+
+  <target name="setup-solr-war" if="solr.war">
+    <unwar src="${solr.war}" dest="${builddir}/deps/"/>
   </target>
 
 
@@ -46,12 +55,15 @@
 
   <target name="jars" depends="build">
     <jar destfile="browse-handler.jar">
-    <fileset dir="${builddir}/browse-handler/"/>
-    <fileset dir="${builddir}/common/"/>
+      <fileset dir="${builddir}/browse-handler/"/>
+      <fileset dir="${builddir}/common/"/>
+      <zipgroupfileset dir="libs" includes="*.jar"/>
     </jar>
     <jar destfile="browse-indexing.jar">
-    <fileset dir="${builddir}/browse-indexing/"/>
-    <fileset dir="${builddir}/common/"/>
+      <fileset dir="${builddir}/browse-indexing/"/>
+      <fileset dir="${builddir}/common/"/>
+      <zipgroupfileset dir="${builddir}/deps/" includes="**/lucene-core*.jar"/>
+      <zipgroupfileset dir="libs" includes="*.jar"/>
     </jar>
   </target>
 
