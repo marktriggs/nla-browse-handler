@@ -375,20 +375,20 @@ class BibDB
     }
 
 
-    public List<Integer> matchingIDs (String heading)
+    public List<String> matchingIDs (String heading)
         throws Exception
     {
         TermQuery q = new TermQuery (new Term (field, heading));
 
         Hits results = db.search (q);
 
-        List<Integer> ids = new Vector<Integer> ();
+        List<String> ids = new Vector<String> ();
 
         for (int i = 0; i < results.length (); i++) {
             Document doc = results.doc (i);
             String[] vals = doc.getValues ("id");
 
-            ids.add (new Integer (vals[0]));
+            ids.add (vals[0]);
         }
 
         return ids;
@@ -423,7 +423,7 @@ class BrowseItem
     public List<String> useInstead = new LinkedList<String> ();
     public String note = "";
     public String heading;
-    public List<Integer> ids;
+    public List<String> ids;
     int count;
 
 
@@ -482,7 +482,7 @@ class Browse
     {
         Log.info ("Populating: " + item.heading);
 
-        List<Integer> ids = bibDB.matchingIDs (item.heading);
+        List<String> ids = bibDB.matchingIDs (item.heading);
         item.ids = ids;
         item.count = ids.size ();
 
