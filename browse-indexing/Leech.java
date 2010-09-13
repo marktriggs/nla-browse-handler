@@ -9,15 +9,32 @@ public class Leech
 
     private String field;
     private TermEnum tenum;
+    private Normaliser normaliser;
 
 
     public Leech (String indexPath,
-                  String field) throws IOException
+                  String field) throws Exception
     {
         reader = IndexReader.open (indexPath);
         searcher = new IndexSearcher (reader);
         this.field = field;
         tenum = reader.terms (new Term (field, ""));
+
+        if (System.getenv ("NORMALISER") != null) {
+            String normaliserClass = System.getenv ("NORMALISER");
+
+            normaliser = (Normaliser) (Class.forName (normaliserClass)
+                        .getConstructor ()
+                        .newInstance ());
+        } else {
+            normaliser = new Normaliser ();
+        }
+    }
+
+
+    public String buildSortKey (String heading)
+    {
+        return normaliser.normalise (heading);
     }
 
 
@@ -38,14 +55,15 @@ public class Leech
     }
 
 
-    public String next () throws Exception
+    public String[] next () throws Exception
     {
         if (tenum.next () &&
             tenum.term () != null &&
             tenum.term ().field ().equals (this.field)) {
             if (termExists (tenum.term ())) {
-            return tenum.term ().text ();
-        } else {
+                String term = tenum.term ().text ();
+                return new String[] {buildSortKey (term), term};
+            } else {
                 return this.next ();
             }
         } else {

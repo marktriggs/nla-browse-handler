@@ -31,29 +31,18 @@ class PrintBrowseHeadings
                                Predicate predicate)
         throws Exception
     {
-        String heading;
+        String[] h;
+        while ((h = leech.next ()) != null) {
+            String sort_key = h[0];
+            String heading = h[1];
 
-        Normaliser normaliser;
-
-        if (System.getenv ("NORMALISER") != null) {
-            String normaliserClass = System.getenv ("NORMALISER");
-
-            normaliser = (Normaliser) (Class.forName (normaliserClass)
-                        .getConstructor ()
-                        .newInstance ());
-        } else {
-            normaliser = new Normaliser ();
-        }
-
-        while ((heading = leech.next ()) != null) {
             if (predicate != null &&
                 !predicate.isSatisfiedBy (heading)) {
                 continue;
             }
 
-            String norm = normaliser.normalise (heading);
-            if (norm != null) {
-                out.println (normaliser.normalise (heading) + "\1" + heading);
+            if (sort_key != null) {
+                out.println (sort_key + "\1" + heading);
             }
         }
     }
@@ -127,7 +116,9 @@ class PrintBrowseHeadings
         PrintWriter out = new PrintWriter (new FileWriter (outFile));
 
         if (authPath != null) {
-            nonprefAuthLeech = new Leech (authPath, System.getProperty ("field.insteadof", "insteadOf"));
+            nonprefAuthLeech = new Leech (authPath,
+                                          System.getProperty ("field.insteadof",
+                                                              "insteadOf"));
 
             authSearcher = new IndexSearcher (authPath);
 
