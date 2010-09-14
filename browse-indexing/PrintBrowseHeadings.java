@@ -87,13 +87,20 @@ class PrintBrowseHeadings
     }
 
 
+    private String getEnvironment (String var)
+    {
+	return (System.getenv (var) != null) ? 
+	    System.getenv (var) : System.getProperty (var.toLowerCase ());
+    }
+
+
     private Leech getBibLeech (String bibPath, String luceneField)
         throws Exception
     {
         String leechClass = "Leech";
 
-        if (System.getenv ("BIBLEECH") != null) {
-            leechClass = System.getenv ("BIBLEECH");
+        if (getEnvironment ("BIBLEECH") != null) {
+            leechClass = getEnvironment ("BIBLEECH");
         }
 
         return (Leech) (Class.forName (leechClass)

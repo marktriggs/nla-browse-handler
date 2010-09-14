@@ -12,6 +12,13 @@ public class Leech
     private Normaliser normaliser;
 
 
+    private String getEnvironment (String var)
+    {
+	return (System.getenv (var) != null) ? 
+	    System.getenv (var) : System.getProperty (var.toLowerCase ());
+    }
+
+
     public Leech (String indexPath,
                   String field) throws Exception
     {
@@ -20,8 +27,8 @@ public class Leech
         this.field = field;
         tenum = reader.terms (new Term (field, ""));
 
-        if (System.getenv ("NORMALISER") != null) {
-            String normaliserClass = System.getenv ("NORMALISER");
+        if (getEnvironment ("NORMALISER") != null) {
+            String normaliserClass = getEnvironment ("NORMALISER");
 
             normaliser = (Normaliser) (Class.forName (normaliserClass)
                         .getConstructor ()
