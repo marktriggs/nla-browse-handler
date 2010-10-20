@@ -64,13 +64,14 @@ public class Leech
 
     public String[] next () throws Exception
     {
-        if (tenum.next () &&
-            tenum.term () != null &&
+        if (tenum.term () != null &&
             tenum.term ().field ().equals (this.field)) {
             if (termExists (tenum.term ())) {
                 String term = tenum.term ().text ();
+                tenum.next ();
                 return new String[] {buildSortKey (term), term};
             } else {
+                tenum.next ();
                 return this.next ();
             }
         } else {
