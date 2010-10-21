@@ -11,7 +11,7 @@ public class VuFindTitleLeech extends Leech
     private FieldSelector titleSelector = new FieldSelector () {
             public FieldSelectorResult accept (String fieldName) {
                 if (fieldName.equals ("title_sort") ||
-                    fieldName.equals ("title")) {
+                    fieldName.equals ("title_fullStr")) {
                     return FieldSelectorResult.LOAD;
                 } else {
                     return FieldSelectorResult.NO_LOAD;
@@ -35,7 +35,7 @@ public class VuFindTitleLeech extends Leech
         Document doc = reader.document (currentDoc, titleSelector);
 
         String[] sort_key = doc.getValues ("title_sort");
-        String[] title = doc.getValues ("title");
+        String[] title = doc.getValues ("title_fullStr");
 
         if (sort_key.length == 1 && title.length == 1) {
             buffer.add (new String[] {sort_key[0], title[0]});
