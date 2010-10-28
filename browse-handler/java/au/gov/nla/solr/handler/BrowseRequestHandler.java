@@ -20,7 +20,7 @@ import au.gov.nla.util.*;
 import org.apache.lucene.search.*;
 import org.apache.lucene.document.*;
 import java.util.logging.Logger;
-
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 class Log
 {
@@ -52,12 +52,11 @@ class HeadingsDB
     long dbVersion;
     int totalCount;
 
+    ReentrantReadWriteLock dbLock = new ReentrantReadWriteLock ();
 
     public HeadingsDB (String path) throws Exception
     {
         this.path = path;
-
-        openDB ();
     }
 
 
@@ -87,12 +86,44 @@ class HeadingsDB
     }
 
 
-    public void reopenIfUpdated () throws Exception
+    synchronized public void reopenIfUpdated () throws Exception
     {
-        if (dbVersion != currentVersion ()) {
-            Log.info ("Reopening HeadingsDB");
-            openDB ();
+        dbLock.readLock ().lock ();
+
+        File flag = new File (path + "-ready");
+        File updated = new File (path + "-updated");
+        if (db == null || (flag.exists () && updated.exists ())) {
+            Log.info ("Index update event detected!");
+            try {
+                dbLock.readLock ().unlock ();
+                dbLock.writeLock ().lock ();
+
+                if (flag.exists () && updated.exists ()) {
+                    Log.info ("Installing new index version...");
+                    if (db != null) {
+                        db.close ();
+                    }
+
+                    File pathFile = new File (path);
+                    pathFile.delete ();
+                    updated.renameTo (pathFile);
+                    flag.delete ();
+
+                    Log.info ("Reopening HeadingsDB");
+                    openDB ();
+                } else if (db == null) {
+                    openDB ();
+                }
+            } finally {
+                dbLock.readLock ().lock ();
+                dbLock.writeLock ().unlock ();
+            }
         }
+    }
+
+    public void queryFinished ()
+    {
+        dbLock.readLock ().unlock ();
     }
 
 
@@ -478,6 +509,12 @@ class Browse
     }
 
 
+    public void queryFinished ()
+    {
+        headingsDB.queryFinished ();
+    }
+
+
     private void populateItem (BrowseItem item) throws Exception
     {
         Log.info ("Populating: " + item.heading);
@@ -687,42 +724,49 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
         BrowseSource source = sources.get (sourceName);
 
-        if (source.browse == null) {
-            source.browse = (new Browse
-                             (new HeadingsDB (source.DBpath),
-                              new AuthDB
-                              (authPath,
-                               solrParams.get ("preferredHeadingField"),
-                               solrParams.get ("useInsteadHeadingField"),
-                               solrParams.get ("seeAlsoHeadingField"),
-                               solrParams.get ("scopeNoteField"))));
+        synchronized (this) {
+            if (source.browse == null) {
+                source.browse = (new Browse
+                                 (new HeadingsDB (source.DBpath),
+                                  new AuthDB
+                                  (authPath,
+                                   solrParams.get ("preferredHeadingField"),
+                                   solrParams.get ("useInsteadHeadingField"),
+                                   solrParams.get ("seeAlsoHeadingField"),
+                                   solrParams.get ("scopeNoteField"))));
+            }
+
+            source.browse.setBibDB (new BibDB (req.getSearcher (),
+                                               source.field));
         }
 
-        source.browse.setBibDB (new BibDB (req.getSearcher (),
-                                           source.field));
         source.browse.reopenDatabasesIfUpdated ();
 
-        if (from != null) {
-            rowid = (source.browse.getId
-                     (clean (from,
-                             (source.ignoreDiacritics != null &&
-                              source.ignoreDiacritics.equals ("yes")),
-                             source.dropChars)));
+        try {
+            if (from != null) {
+                rowid = (source.browse.getId
+                         (clean (from,
+                                 (source.ignoreDiacritics != null &&
+                                  source.ignoreDiacritics.equals ("yes")),
+                                 source.dropChars)));
+            }
+
+
+            Log.info ("Browsing from: " + rowid);
+
+            BrowseList list = source.browse.getList (rowid, offset, rows);
+
+            Map<String,Object> result = new HashMap<String, Object> ();
+
+            result.put ("totalCount", list.totalCount);
+            result.put ("items", list.asMap ());
+            result.put ("startRow", rowid);
+            result.put ("offset", offset);
+
+            rsp.add ("Browse", result);
+        } finally {
+            source.browse.queryFinished ();
         }
-
-
-        Log.info ("Browsing from: " + rowid);
-
-        BrowseList list = source.browse.getList (rowid, offset, rows);
-
-        Map<String,Object> result = new HashMap<String, Object> ();
-
-        result.put ("totalCount", list.totalCount);
-        result.put ("items", list.asMap ());
-        result.put ("startRow", rowid);
-        result.put ("offset", offset);
-
-        rsp.add ("Browse", result);
     }
 
 
