@@ -7,6 +7,7 @@ package au.gov.nla.solr.handler;
 
 
 import org.apache.lucene.index.*;
+import org.apache.lucene.store.*;
 import org.apache.solr.handler.*;
 import org.apache.solr.request.*;
 import org.apache.solr.common.params.SolrParams;
@@ -236,15 +237,16 @@ class LuceneDB
             searcher.close ();
         }
 
-        searcher = new IndexSearcher (dbpath);
+        searcher = new IndexSearcher (FSDirectory.open (new File (dbpath)));
         currentVersion = indexVersion ();
     }
 
 
-    public Hits search (Query q) throws Exception
+    public TopDocs search (Query q, int n) throws Exception
     {
-        return searcher.search (q);
+        return searcher.search (q, n);
     }
+
 
     private long indexVersion ()
     {
@@ -255,6 +257,12 @@ class LuceneDB
     private boolean isDBUpdated ()
     {
         return (currentVersion != indexVersion ());
+    }
+
+
+    public Document getDocument (int docid) throws Exception
+    {
+        return searcher.getIndexReader ().document (docid);
     }
 
 
@@ -271,6 +279,8 @@ class LuceneDB
 
 class AuthDB
 {
+    static int MAX_PREFERRED_HEADINGS = 1000;
+
     private LuceneDB db;
     private String preferredHeadingField;
     private String useInsteadHeadingField;
@@ -313,12 +323,12 @@ class AuthDB
     public Document getAuthorityRecord (String heading)
         throws Exception
     {
-        Hits results = (db.search
-                        (new TermQuery (new Term (preferredHeadingField,
-                                                  heading))));
+        TopDocs results = (db.search (new TermQuery (new Term (preferredHeadingField,
+                                                               heading)),
+                                      1));
 
-        if (results.length () > 0) {
-            return results.doc (0);
+        if (results.totalHits > 0) {
+            return db.getDocument (results.scoreDocs[0].doc);
         } else {
             return null;
         }
@@ -328,17 +338,14 @@ class AuthDB
     public List<Document> getPreferredHeadings (String heading)
         throws Exception
     {
-        Hits results = (db.search
-                        (new TermQuery (new Term (useInsteadHeadingField,
-                                                  heading))));
+        TopDocs results = (db.search (new TermQuery (new Term (useInsteadHeadingField,
+                                                               heading)),
+                                      MAX_PREFERRED_HEADINGS));
 
         List<Document> result = new Vector<Document> ();
 
-        Iterator it = (Iterator)results.iterator ();
-
-        while (it.hasNext ()) {
-            Hit hit = (Hit)it.next ();
-            result.add (hit.getDocument ());
+        for (int i = 0; i < results.totalHits; i++) {
+            result.add (db.getDocument (results.scoreDocs[i].doc));
         }
 
         return result;
@@ -387,7 +394,6 @@ class BibDB
     private IndexSearcher db;
     private String field;
 
-
     public BibDB (IndexSearcher searcher, String field) throws Exception
     {
         db = searcher;
@@ -400,27 +406,55 @@ class BibDB
     {
         TermQuery q = new TermQuery (new Term (field, heading));
 
-        Hits results = db.search (q);
+        Log.info ("Searching '" + field + "' for '" + "'" + heading + "'");
 
-        return results.length ();
+        TotalHitCountCollector counter = new TotalHitCountCollector();
+        db.search (q, counter);
+
+        Log.info ("Hits: " + counter.getTotalHits ());
+
+        return counter.getTotalHits ();
     }
 
 
-    public List<String> matchingIDs (String heading)
+    public List<Integer> matchingIDs (String heading)
         throws Exception
     {
         TermQuery q = new TermQuery (new Term (field, heading));
 
-        Hits results = db.search (q);
+        Log.info (System.currentTimeMillis () + " Searching '" + field + "' for '" + heading + "'");
 
-        List<String> ids = new Vector<String> ();
+        final List<Integer> ids = new ArrayList<Integer> ();
 
-        for (int i = 0; i < results.length (); i++) {
-            Document doc = results.doc (i);
-            String[] vals = doc.getValues ("id");
+        db.search (q, new Collector () {
+                private int docBase;
 
-            ids.add (vals[0]);
-        }
+                public void setScorer (Scorer scorer) {
+                }
+
+                public boolean acceptsDocsOutOfOrder () {
+                    return true;
+                }
+
+                public void collect (int docnum) {
+                    int docid = docnum + docBase;
+                    try {
+                        Document doc = db.getIndexReader ().document (docid);
+
+                        String[] vals = doc.getValues ("id");
+                        ids.add (new Integer (vals[0]));
+                    } catch (org.apache.lucene.index.CorruptIndexException e) {
+                        Log.info ("CORRUPT INDEX EXCEPTION.  EEK! - " + e);
+                    } catch (Exception e) {
+                        Log.info ("Exception thrown: " + e);
+                    }
+
+                }
+
+                public void setNextReader (IndexReader reader, int docBase) {
+                    this.docBase = docBase;
+                }
+            });
 
         return ids;
     }
@@ -454,7 +488,7 @@ class BrowseItem
     public List<String> useInstead = new LinkedList<String> ();
     public String note = "";
     public String heading;
-    public List<String> ids;
+    public List<Integer> ids;
     int count;
 
 
@@ -519,7 +553,7 @@ class Browse
     {
         Log.info ("Populating: " + item.heading);
 
-        List<String> ids = bibDB.matchingIDs (item.heading);
+        List<Integer> ids = bibDB.matchingIDs (item.heading);
         item.ids = ids;
         item.count = ids.size ();
 
@@ -689,8 +723,9 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
 
 
-    public void handleRequestBody (SolrQueryRequest req,
-                                   SolrQueryResponse rsp)
+    @Override
+    public void handleRequestBody (org.apache.solr.request.SolrQueryRequest req,
+                                   org.apache.solr.response.SolrQueryResponse rsp)
         throws Exception
     {
         SolrParams p = req.getParams ();

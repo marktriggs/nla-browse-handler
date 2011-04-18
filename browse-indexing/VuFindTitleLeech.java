@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.*;
+import org.apache.lucene.store.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.document.*;
 
@@ -24,7 +25,7 @@ public class VuFindTitleLeech extends Leech
     {
         super (indexPath, field);
 
-        reader = IndexReader.open (indexPath);
+        reader = IndexReader.open (FSDirectory.open (new File (indexPath)));
         buffer = new LinkedList<String[]> ();
     }
 
