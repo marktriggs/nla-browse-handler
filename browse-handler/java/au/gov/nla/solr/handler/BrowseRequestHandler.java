@@ -66,6 +66,7 @@ class HeadingsDB
         Class.forName ("org.sqlite.JDBC");
 
         db = DriverManager.getConnection ("jdbc:sqlite:" + path);
+        db.setAutoCommit (false);
         dbVersion = currentVersion ();
 
         PreparedStatement countStmnt = db.prepareStatement (
@@ -141,7 +142,7 @@ class HeadingsDB
         ResultSet rs = rowStmnt.executeQuery ();
 
         if (rs.next ()) {
-        return rs.getInt ("rowid");
+            return rs.getInt ("rowid");
         } else {
             return totalCount + 1;   // past the end
         }
