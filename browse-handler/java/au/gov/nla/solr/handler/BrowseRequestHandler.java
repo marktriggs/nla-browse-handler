@@ -418,14 +418,14 @@ class BibDB
     }
 
 
-    public List<Integer> matchingIDs (String heading)
+    public List<String> matchingIDs (String heading)
         throws Exception
     {
         TermQuery q = new TermQuery (new Term (field, heading));
 
         Log.info (System.currentTimeMillis () + " Searching '" + field + "' for '" + heading + "'");
 
-        final List<Integer> ids = new ArrayList<Integer> ();
+        final List<String> ids = new ArrayList<String> ();
 
         db.search (q, new Collector () {
                 private int docBase;
@@ -443,7 +443,7 @@ class BibDB
                         Document doc = db.getIndexReader ().document (docid);
 
                         String[] vals = doc.getValues ("id");
-                        ids.add (new Integer (vals[0]));
+                        ids.add (vals[0]);
                     } catch (org.apache.lucene.index.CorruptIndexException e) {
                         Log.info ("CORRUPT INDEX EXCEPTION.  EEK! - " + e);
                     } catch (Exception e) {
@@ -489,7 +489,7 @@ class BrowseItem
     public List<String> useInstead = new LinkedList<String> ();
     public String note = "";
     public String heading;
-    public List<Integer> ids;
+    public List<String> ids;
     int count;
 
 
@@ -554,7 +554,7 @@ class Browse
     {
         Log.info ("Populating: " + item.heading);
 
-        List<Integer> ids = bibDB.matchingIDs (item.heading);
+        List<String> ids = bibDB.matchingIDs (item.heading);
         item.ids = ids;
         item.count = ids.size ();
 
