@@ -12,10 +12,10 @@ public class Leech
     private Normaliser normaliser;
 
 
-    private String getEnvironment (String var)
+    protected String getEnvironment (String var)
     {
-	return (System.getenv (var) != null) ? 
-	    System.getenv (var) : System.getProperty (var.toLowerCase ());
+        return (System.getenv (var) != null) ?
+            System.getenv (var) : System.getProperty (var.toLowerCase ());
     }
 
 
