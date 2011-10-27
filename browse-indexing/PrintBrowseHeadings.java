@@ -28,6 +28,8 @@ class PrintBrowseHeadings
 
     private String luceneField;
 
+    private String KEY_SEPARATOR = "\1";
+    private String RECORD_SEPARATOR = "\r\n";
 
     private void loadHeadings (Leech leech,
                                PrintWriter out,
@@ -45,7 +47,7 @@ class PrintBrowseHeadings
             }
 
             if (sort_key != null) {
-                out.println (sort_key + "\1" + heading);
+                out.print (sort_key + KEY_SEPARATOR + heading + RECORD_SEPARATOR);
             }
         }
     }
