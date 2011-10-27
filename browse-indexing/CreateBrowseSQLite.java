@@ -12,23 +12,62 @@ class CreateBrowseSQLite
 {
     private Connection outputDB;
 
+    private String KEY_SEPARATOR = "\1";
+    private String RECORD_SEPARATOR = "\2";
+
+
+    /*
+     * Like BufferedReader#readLine(), but only returns lines ended by a \r\n.
+     */
+    private String readCRLFLine (BufferedReader br) throws IOException
+    {
+        StringBuilder sb = new StringBuilder();
+
+        while (true) {
+            int ch = br.read ();
+
+            if (ch >= 0) {
+                if (ch == '\r') {
+                    // This might either be a carriage return embedded in record
+                    // data (which we want to preserve) or the first part of the
+                    // \r\n end of line marker.
+
+                    ch = br.read ();
+
+                    if (ch == '\n') {
+                        // An end of line.  We're done.
+                        return sb.toString();
+                    }
+
+                    // Must have been an embedded carriage return.  Keep it.
+                    sb.append((char) '\r');
+                }
+
+                sb.append((char) ch);
+            } else {
+                // EOF.  Show's over.
+                return null;
+            }
+        }
+    }
+
 
     private void loadHeadings (BufferedReader br)
         throws Exception
     {
         int count = 0;
-        String heading;
 
         outputDB.setAutoCommit (false);
 
         PreparedStatement prep = outputDB.prepareStatement (
             "insert or ignore into all_headings (key, heading) values (?, ?)");
 
-        while ((heading = br.readLine ()) != null) {
-            int sep = heading.indexOf ('\1');
+        String line;
+        while ((line = readCRLFLine (br)) != null) {
+            int sep = line.indexOf (KEY_SEPARATOR.charAt (0));
             if (sep >= 0) {
-                prep.setString (1, heading.substring (0, sep));
-                prep.setString (2, heading.substring (sep + 1));
+                prep.setString (1, line.substring (0, sep));
+                prep.setString (2, line.substring (sep + 1));
 
                 prep.addBatch ();
             }
@@ -39,7 +78,7 @@ class CreateBrowseSQLite
             }
 
             count++;
-       }
+        }
 
         prep.executeBatch ();
         prep.close ();

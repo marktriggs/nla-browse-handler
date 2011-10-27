@@ -6,6 +6,7 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.*;
 
+import org.apache.lucene.store.*;
 import org.apache.lucene.search.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.document.*;
@@ -16,6 +17,8 @@ import java.sql.*;
 
 class PrintBrowseHeadings
 {
+    static int MAX_PREFERRED_HEADINGS = 1000;
+
     private Leech bibLeech;
     private Leech authLeech;
     private Leech nonprefAuthLeech;
@@ -25,6 +28,8 @@ class PrintBrowseHeadings
 
     private String luceneField;
 
+    private String KEY_SEPARATOR = "\1";
+    private String RECORD_SEPARATOR = "\r\n";
 
     private void loadHeadings (Leech leech,
                                PrintWriter out,
@@ -42,7 +47,7 @@ class PrintBrowseHeadings
             }
 
             if (sort_key != null) {
-                out.println (sort_key + "\1" + heading);
+                out.print (sort_key + KEY_SEPARATOR + heading + RECORD_SEPARATOR);
             }
         }
     }
@@ -50,26 +55,24 @@ class PrintBrowseHeadings
 
     private int bibCount (String heading) throws IOException
     {
-        Hits hits = bibSearcher.search
-            (new TermQuery (new Term (luceneField, heading)));
+        TotalHitCountCollector counter = new TotalHitCountCollector();
 
+        bibSearcher.search (new TermQuery (new Term (luceneField, heading)),
+                            counter);
 
-        return hits.length ();
+        return counter.getTotalHits ();
     }
 
 
     private boolean isLinkedFromBibData (String heading)
         throws IOException
     {
-        Hits hits = authSearcher.search
-            (new TermQuery (new Term (System.getProperty ("field.insteadof", "insteadOf"), heading)));
+        TopDocs hits = authSearcher.search
+            (new TermQuery (new Term (System.getProperty ("field.insteadof", "insteadOf"), heading)),
+             MAX_PREFERRED_HEADINGS);
 
-        Iterator it = hits.iterator ();
-
-        while (it.hasNext ()) {
-            Hit hit = (Hit) it.next ();
-
-            Document doc = hit.getDocument ();
+        for (int i = 0; i < hits.totalHits; i++) {
+            Document doc = authSearcher.getIndexReader ().document (hits.scoreDocs[i].doc);
 
             String[] preferred = doc.getValues (System.getProperty ("field.preferred", "preferred"));
             if (preferred.length > 0) {
@@ -118,7 +121,7 @@ class PrintBrowseHeadings
         bibLeech = getBibLeech (bibPath, luceneField);
         this.luceneField = luceneField;
 
-        bibSearcher = new IndexSearcher (bibPath);
+        bibSearcher = new IndexSearcher (FSDirectory.open (new File (bibPath)));
 
         PrintWriter out = new PrintWriter (new FileWriter (outFile));
 
@@ -127,7 +130,7 @@ class PrintBrowseHeadings
                                           System.getProperty ("field.insteadof",
                                                               "insteadOf"));
 
-            authSearcher = new IndexSearcher (authPath);
+            authSearcher = new IndexSearcher (FSDirectory.open (new File (authPath)));
 
             loadHeadings (nonprefAuthLeech, out,
                           new Predicate () {

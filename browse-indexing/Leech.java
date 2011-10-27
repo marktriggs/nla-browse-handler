@@ -1,3 +1,4 @@
+import org.apache.lucene.store.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.search.*;
 import java.io.*;
@@ -22,7 +23,7 @@ public class Leech
     public Leech (String indexPath,
                   String field) throws Exception
     {
-        reader = IndexReader.open (indexPath);
+        reader = IndexReader.open (FSDirectory.open (new File (indexPath)));
         searcher = new IndexSearcher (reader);
         this.field = field;
         tenum = reader.terms (new Term (field, ""));
@@ -55,7 +56,7 @@ public class Leech
     private boolean termExists (Term t)
     {
         try {
-            return (this.searcher.search (new TermQuery (t)).length () > 0);
+            return (this.searcher.search (new TermQuery (t), 1).totalHits > 0);
         } catch (IOException e) {
             return false;
         }

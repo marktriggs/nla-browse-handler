@@ -2,6 +2,7 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.*;
 
+import org.apache.lucene.store.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.document.*;
 import org.apache.lucene.analysis.standard.*;
@@ -39,7 +40,9 @@ class IndexAuth
         InputStream in = new FileInputStream (dataFile);
         MarcReader reader = new MarcStreamReader (in);
 
-        IndexWriter iw = new IndexWriter (indexDir, new StandardAnalyzer ());
+        IndexWriter iw = new IndexWriter (FSDirectory.open (new File (indexDir)),
+                                          new StandardAnalyzer (org.apache.lucene.util.Version.LUCENE_29),
+                                          IndexWriter.MaxFieldLength.UNLIMITED);
 
         while (reader.hasNext ()) {
             Document doc = new Document ();
@@ -86,14 +89,14 @@ class IndexAuth
                     doc.add (new Field (field,
                                         clean (sb.toString ()),
                                         Field.Store.YES,
-                                        Field.Index.UN_TOKENIZED));
+                                        Field.Index.NOT_ANALYZED));
                 }
             }
 
             doc.add (new Field ("collection",
                                 "Authority",
                                 Field.Store.NO,
-                                Field.Index.UN_TOKENIZED));
+                                Field.Index.NOT_ANALYZED));
 
             iw.addDocument (doc);
         }
