@@ -1,5 +1,5 @@
 //
-// Author: Mark Triggs <mtriggs@nla.gov.au>
+// Author: Mark Triggs <mark@dishevelled.net>
 //
 
 
