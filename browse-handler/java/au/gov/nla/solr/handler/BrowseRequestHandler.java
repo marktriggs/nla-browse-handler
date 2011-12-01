@@ -63,6 +63,11 @@ class HeadingsDB
 
     private void openDB () throws Exception
     {
+        if (!new File (path).exists()) {
+            throw new Exception ("I couldn't find a browse index at: " + path +
+                                 ".\nMaybe you need to create your browse indexes?");
+        }
+
         Class.forName ("org.sqlite.JDBC");
 
         db = DriverManager.getConnection ("jdbc:sqlite:" + path);
@@ -776,9 +781,9 @@ public class BrowseRequestHandler extends RequestHandlerBase
                                                source.field));
         }
 
-        source.browse.reopenDatabasesIfUpdated ();
-
         try {
+            source.browse.reopenDatabasesIfUpdated ();
+
             if (from != null) {
                 rowid = (source.browse.getId
                          (clean (from,
