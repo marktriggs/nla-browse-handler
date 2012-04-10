@@ -11,6 +11,8 @@ public class DiacriticStripper
 {
     private String normalise (String s) throws Exception
     {
+        String result = s;
+
         try {
             Class normalizer = Class.forName ("java.text.Normalizer");
             Class normalizerForm = Class.forName ("java.text.Normalizer$Form");
@@ -22,7 +24,7 @@ public class DiacriticStripper
             Method getForm = normalizerForm.getMethod ("valueOf",
                                                        Class.forName ("java.lang.String"));
 
-            return (String)normalize.invoke (null, s, getForm.invoke (null, "NFKD"));
+            result = (String)normalize.invoke (null, s, getForm.invoke (null, "NFKD"));
         } catch (ClassNotFoundException e) {
             Class normalizer = Class.forName ("sun.text.Normalizer");
             Method normalize = normalizer.getMethod ("normalize",
@@ -30,11 +32,13 @@ public class DiacriticStripper
                                                      Class.forName ("sun.text.Normalizer$Mode"),
                                                      Integer.TYPE);
 
-            return (String)normalize.invoke (null,
+            result = (String)normalize.invoke (null,
                                              s,
                                              normalizer.getDeclaredField ("DECOMP_COMPAT").get (normalizer),
                                              0);
         }
+
+        return result.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
 
 
