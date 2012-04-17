@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config>
+  <abortOnConfigurationError>${solr.abortOnConfigurationError:false}</abortOnConfigurationError>
+  <luceneMatchVersion>LUCENE_35</luceneMatchVersion>
+  <dataDir>${solr.solr.home:./solr}/biblio</dataDir>
+
+  <indexDefaults>
+    <useCompoundFile>false</useCompoundFile>
+    <mergeFactor>10</mergeFactor>
+    <ramBufferSizeMB>32</ramBufferSizeMB>
+    <maxMergeDocs>2147483647</maxMergeDocs>
+    <maxFieldLength>10000</maxFieldLength>
+    <writeLockTimeout>1000</writeLockTimeout>
+    <commitLockTimeout>10000</commitLockTimeout>
+    <lockType>single</lockType>
+  </indexDefaults>
+
+  <mainIndex>
+    <useCompoundFile>false</useCompoundFile>
+    <ramBufferSizeMB>32</ramBufferSizeMB>
+    <mergeFactor>10</mergeFactor>
+    <maxMergeDocs>2147483647</maxMergeDocs>
+    <maxFieldLength>10000</maxFieldLength>
+    <unlockOnStartup>false</unlockOnStartup>
+    <deletionPolicy class="solr.SolrDeletionPolicy">
+      <str name="keepOptimizedOnly">false</str>
+      <str name="maxCommitsToKeep">1</str>
+    </deletionPolicy>
+  </mainIndex>
+
+  <jmx />
+
+  <updateHandler class="solr.DirectUpdateHandler2">
+    <autoCommit> 
+      <maxDocs>10000</maxDocs>
+      <maxTime>20000</maxTime>
+    </autoCommit>
+  </updateHandler>
+
+  <query>
+    <maxBooleanClauses>1024</maxBooleanClauses>
+    <filterCache
+        class="solr.FastLRUCache"
+        size="300000"
+        initialSize="300000"
+        autowarmCount="50000"/>
+    <queryResultCache
+        class="solr.LRUCache"
+        size="100000"
+        initialSize="100000"
+        autowarmCount="50000"/>
+    <documentCache
+        class="solr.LRUCache"
+        size="50000"
+        initialSize="50000"
+        autowarmCount="10000"/>
+    <enableLazyFieldLoading>true</enableLazyFieldLoading>
+    <queryResultWindowSize>50</queryResultWindowSize>
+    <queryResultMaxDocsCached>200</queryResultMaxDocsCached>
+    <HashDocSet maxSize="3000" loadFactor="0.75"/>
+    <listener event="newSearcher" class="solr.QuerySenderListener">
+      <arr name="queries">
+        <lst>
+          <str name="q">science art business engineering history</str>
+          <str name="start">0</str>
+          <str name="rows">10</str>
+        </lst>
+      </arr>
+    </listener>
+    <listener event="firstSearcher" class="solr.QuerySenderListener">
+      <arr name="queries">
+        <lst>
+          <str name="q">science art business engineering history</str>
+          <str name="facet.field">format</str>
+          <str name="fq">format:book</str>
+        </lst>
+      </arr>
+    </listener>
+    <useColdSearcher>false</useColdSearcher>
+    <maxWarmingSearchers>2</maxWarmingSearchers>
+  </query>
+
+  <requestDispatcher handleSelect="true" >
+    <requestParsers enableRemoteStreaming="true" multipartUploadLimitInKB="2048000" />
+    <httpCaching lastModifiedFrom="openTime"
+                 etagSeed="Solr">
+    </httpCaching>
+  </requestDispatcher>
+
+  <requestHandler name="standard" class="solr.StandardRequestHandler" default="true">
+    <lst name="defaults">
+      <str name="echoParams">explicit</str>
+    </lst>
+  </requestHandler>
+
+  <requestHandler name="/browse" class="au.gov.nla.solr.handler.BrowseRequestHandler">
+    <str name="authIndexPath">${solr.solr.home:./solr}/authority/index</str>
+    <str name="bibIndexPath">${solr.solr.home:./solr}/biblio/index</str>
+    <str name="preferredHeadingField">heading</str>
+    <str name="useInsteadHeadingField">use_for</str>
+    <str name="seeAlsoHeadingField">see_also</str>
+    <str name="scopeNoteField">scope_note</str>
+    <str name="sources">topic,author,title,lcc,dewey,sample0,sample1,sample2,sample3,sample4,sample5,sample6,sample7,sample8,sample9,sample10,sample11,sample12,sample13,sample14,sample15,sample16,sample17,sample18,sample19,sample20</str>
+    <lst name="topic">
+      <str name="DBpath">${solr.solr.home:./solr}/topic_browse.db</str>
+      <str name="field">topic_browse</str>
+    </lst>
+    <lst name="author">
+      <str name="DBpath">${solr.solr.home:./solr}/author_browse.db</str>
+      <str name="field">author_browse</str>
+    </lst>
+    <lst name="title">
+      <str name="DBpath">${solr.solr.home:./solr}/title_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample0">
+      <str name="DBpath">${solr.solr.home:./solr}/sample0_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample1">
+      <str name="DBpath">${solr.solr.home:./solr}/sample1_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample2">
+      <str name="DBpath">${solr.solr.home:./solr}/sample2_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample3">
+      <str name="DBpath">${solr.solr.home:./solr}/sample3_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample4">
+      <str name="DBpath">${solr.solr.home:./solr}/sample4_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample5">
+      <str name="DBpath">${solr.solr.home:./solr}/sample5_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample6">
+      <str name="DBpath">${solr.solr.home:./solr}/sample6_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample7">
+      <str name="DBpath">${solr.solr.home:./solr}/sample7_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample8">
+      <str name="DBpath">${solr.solr.home:./solr}/sample8_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample9">
+      <str name="DBpath">${solr.solr.home:./solr}/sample9_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample10">
+      <str name="DBpath">${solr.solr.home:./solr}/sample10_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample11">
+      <str name="DBpath">${solr.solr.home:./solr}/sample11_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample12">
+      <str name="DBpath">${solr.solr.home:./solr}/sample12_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample13">
+      <str name="DBpath">${solr.solr.home:./solr}/sample13_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample14">
+      <str name="DBpath">${solr.solr.home:./solr}/sample14_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample15">
+      <str name="DBpath">${solr.solr.home:./solr}/sample15_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample16">
+      <str name="DBpath">${solr.solr.home:./solr}/sample16_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample17">
+      <str name="DBpath">${solr.solr.home:./solr}/sample17_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample18">
+      <str name="DBpath">${solr.solr.home:./solr}/sample18_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample19">
+      <str name="DBpath">${solr.solr.home:./solr}/sample19_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="sample20">
+      <str name="DBpath">${solr.solr.home:./solr}/sample20_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+    <lst name="lcc">
+      <str name="DBpath">${solr.solr.home:./solr}/lcc_browse.db</str>
+      <str name="field">callnumber-a</str>
+    </lst>
+    <lst name="dewey">
+      <str name="DBpath">${solr.solr.home:./solr}/dewey_browse.db</str>
+      <str name="field">dewey-raw</str>
+    </lst>
+  </requestHandler>
+</config>

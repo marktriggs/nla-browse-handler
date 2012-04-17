@@ -3,6 +3,10 @@ import org.apache.lucene.index.*;
 import org.apache.lucene.search.*;
 import java.io.*;
 
+import au.gov.nla.util.Normaliser;
+import au.gov.nla.util.BrowseEntry;
+
+
 public class Leech
 {
     protected IndexReader reader;
@@ -13,13 +17,6 @@ public class Leech
     private Normaliser normaliser;
 
 
-    protected String getEnvironment (String var)
-    {
-        return (System.getenv (var) != null) ?
-            System.getenv (var) : System.getProperty (var.toLowerCase ());
-    }
-
-
     public Leech (String indexPath,
                   String field) throws Exception
     {
@@ -28,19 +25,11 @@ public class Leech
         this.field = field;
         tenum = reader.terms (new Term (field, ""));
 
-        if (getEnvironment ("NORMALISER") != null) {
-            String normaliserClass = getEnvironment ("NORMALISER");
-
-            normaliser = (Normaliser) (Class.forName (normaliserClass)
-                        .getConstructor ()
-                        .newInstance ());
-        } else {
-            normaliser = new Normaliser ();
-        }
+        normaliser = Normaliser.getInstance ();
     }
 
 
-    public String buildSortKey (String heading)
+    public byte[] buildSortKey (String heading)
     {
         return normaliser.normalise (heading);
     }
@@ -64,14 +53,14 @@ public class Leech
     }
 
 
-    public String[] next () throws Exception
+    public BrowseEntry next () throws Exception
     {
         if (tenum.term () != null &&
             tenum.term ().field ().equals (this.field)) {
             if (termExists (tenum.term ())) {
                 String term = tenum.term ().text ();
                 tenum.next ();
-                return new String[] {buildSortKey (term), term};
+                return new BrowseEntry (buildSortKey (term), term);
             } else {
                 tenum.next ();
                 return this.next ();

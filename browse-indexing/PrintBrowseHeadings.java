@@ -13,9 +13,13 @@ import org.apache.lucene.document.*;
 
 import java.sql.*;
 
+import au.gov.nla.util.BrowseEntry;
+
+// Note that this version is coming from Solr!
+import org.apache.commons.codec.binary.Base64;
 
 
-class PrintBrowseHeadings
+public class PrintBrowseHeadings
 {
     private Leech bibLeech;
     private Leech authLeech;
@@ -34,10 +38,10 @@ class PrintBrowseHeadings
                                Predicate predicate)
         throws Exception
     {
-        String[] h;
+        BrowseEntry h;
         while ((h = leech.next ()) != null) {
-            String sort_key = h[0];
-            String heading = h[1];
+            byte[] sort_key = h.key;
+            String heading = h.value;
 
             if (predicate != null &&
                 !predicate.isSatisfiedBy (heading)) {
@@ -45,7 +49,10 @@ class PrintBrowseHeadings
             }
 
             if (sort_key != null) {
-                out.print (sort_key + KEY_SEPARATOR + heading + RECORD_SEPARATOR);
+                out.print (new String (Base64.encodeBase64 (sort_key)) +
+                           KEY_SEPARATOR +
+                           heading +
+                           RECORD_SEPARATOR);
             }
         }
     }

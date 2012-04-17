@@ -30,6 +30,7 @@
     <mkdir dir="${builddir}/common"/>
     <javac debug="on" srcdir="common/java" destdir="${builddir}/common">
       <classpath refid="classpath"/>
+      <compilerarg value="-Xlint"/>
     </javac>
   </target>
 
@@ -38,6 +39,7 @@
     <mkdir dir="${builddir}/browse-handler"/>
     <javac debug="on" srcdir="browse-handler/java" destdir="${builddir}/browse-handler">
       <classpath refid="classpath"/>
+      <compilerarg value="-Xlint"/>
     </javac>
   </target>
 
@@ -45,6 +47,7 @@
     <mkdir dir="${builddir}/browse-indexing"/>
     <javac debug="on" srcdir="browse-indexing/" destdir="${builddir}/browse-indexing">
       <classpath refid="classpath"/>
+      <compilerarg value="-Xlint"/>
     </javac>
   </target>
 
@@ -59,14 +62,24 @@
     <jar destfile="browse-handler.jar">
       <fileset dir="${builddir}/browse-handler/"/>
       <fileset dir="${builddir}/common/"/>
-      <zipgroupfileset dir="libs" includes="*.jar"/>
     </jar>
     <jar destfile="browse-indexing.jar">
       <fileset dir="${builddir}/browse-indexing/"/>
       <fileset dir="${builddir}/common/"/>
       <zipgroupfileset dir="${builddir}/deps/" includes="**/lucene-core*.jar"/>
-      <zipgroupfileset dir="libs" includes="*.jar"/>
+      <zipgroupfileset dir="libs">
+        <include name="commons-codec-1.5.jar"/>
+        <include name="icu4j-49.1.jar"/>
+        <include name="marc4j.jar"/>
+        <include name="sqlitejdbc-v053.jar"/>
+      </zipgroupfileset>
     </jar>
   </target>
 
+  <target name="test" depends="build">
+    <exec executable="sh">
+      <arg value="-c" />
+      <arg value="java -Dfile.encoding=UTF-8 -cp 'build/deps/WEB-INF/lib/*:build/common:build/browse-indexing:build/browse-handler:libs/*:' clojure.main tests/tests.clj 2>/dev/null" />
+    </exec>
+  </target>
 </project>

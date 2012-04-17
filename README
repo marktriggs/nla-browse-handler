@@ -134,7 +134,6 @@
        <lst name="subjects">
 	 <str name="DBpath">/path/to/your/subjectsbrowse.db</str>
 	 <str name="field">subject-browse</str>
-         <str name="ignoreDiacritics">yes</str>
          <str name="dropChars">[]()',</str>
        </lst>
     </requestHandler>

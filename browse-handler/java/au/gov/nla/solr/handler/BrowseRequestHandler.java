@@ -23,6 +23,9 @@ import org.apache.lucene.document.*;
 import java.util.logging.Logger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import au.gov.nla.util.Normaliser;
+import au.gov.nla.util.BrowseEntry;
+
 class Log
 {
     private static Logger log ()
@@ -52,12 +55,14 @@ class HeadingsDB
     String path;
     long dbVersion;
     int totalCount;
+    Normaliser normaliser;
 
     ReentrantReadWriteLock dbLock = new ReentrantReadWriteLock ();
 
     public HeadingsDB (String path) throws Exception
     {
         this.path = path;
+        normaliser = Normaliser.getInstance ();
     }
 
 
@@ -142,7 +147,7 @@ class HeadingsDB
             "order by key " +
             "limit 1");
 
-        rowStmnt.setString (1, from);
+        rowStmnt.setBytes (1, normaliser.normalise (from));
 
         ResultSet rs = rowStmnt.executeQuery ();
 
@@ -558,8 +563,6 @@ class Browse
 
     private void populateItem (BrowseItem item) throws Exception
     {
-        Log.info ("Populating: " + item.heading);
-
         List<String> ids = bibDB.matchingIDs (item.heading);
         item.ids = ids;
         item.count = ids.size ();
@@ -618,7 +621,6 @@ class BrowseSource
 {
     public String DBpath;
     public String field;
-    public String ignoreDiacritics;
     public String dropChars;
 
     public Browse browse;
@@ -626,12 +628,10 @@ class BrowseSource
 
     public BrowseSource (String DBpath,
                          String field,
-                         String ignoreDiacritics,
                          String dropChars)
     {
         this.DBpath = DBpath;
         this.field = field;
-        this.ignoreDiacritics = ignoreDiacritics;
         this.dropChars = dropChars;
     }
 }
@@ -680,7 +680,6 @@ public class BrowseRequestHandler extends RequestHandlerBase
             sources.put (source,
                          new BrowseSource (entry.get ("DBpath"),
                                            entry.get ("field"),
-                                           entry.get ("ignoreDiacritics"),
                                            entry.get ("dropChars")));
         }
     }
@@ -695,40 +694,6 @@ public class BrowseRequestHandler extends RequestHandlerBase
             return 0;
         }
     }
-
-
-    private String handle_diacritics (String s)
-    {
-        DiacriticStripper ds = new DiacriticStripper ();
-
-        return ds.fix (s);
-    }
-
-
-    private String clean (String s, boolean ignoreDiacritics, String dropChars)
-    {
-        String cleaned = s;
-
-        if (dropChars != null) {
-            for (int i = 0; i < dropChars.length (); i++) {
-                cleaned = cleaned.replace (String.valueOf
-                                           (dropChars.charAt (i)),
-                                           "");
-            }
-        }
-
-        cleaned = cleaned.replaceAll ("[\\(\\)]", "");
-        cleaned = cleaned.replaceAll ("-$", "");
-        cleaned = cleaned.replaceAll ("-", " ");
-        cleaned = cleaned.replaceAll (" +", " ");
-
-        if (!ignoreDiacritics) {
-            cleaned = handle_diacritics (cleaned);
-        }
-
-        return cleaned.toLowerCase ();
-    }
-
 
 
     @Override
@@ -787,11 +752,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
             source.browse.reopenDatabasesIfUpdated ();
 
             if (from != null) {
-                rowid = (source.browse.getId
-                         (clean (from,
-                                 (source.ignoreDiacritics != null &&
-                                  source.ignoreDiacritics.equals ("yes")),
-                                 source.dropChars)));
+                rowid = (source.browse.getId (from));
             }
 
 
