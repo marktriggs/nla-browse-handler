@@ -57,7 +57,7 @@ public class StoredFieldLeech extends Leech
         String[] value = doc.getValues (valueField);
 
         if (sort_key.length == 1 && value.length == 1) {
-            buffer.add (new String[] {sort_key[0], value[0]});
+            buffer.add (new String[] {buildSortKey(sort_key[0]), value[0]});
         }
     }
 
