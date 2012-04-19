@@ -15,7 +15,7 @@ import java.sql.*;
 
 
 
-class PrintBrowseHeadings
+public class PrintBrowseHeadings
 {
     static int MAX_PREFERRED_HEADINGS = 1000;
 

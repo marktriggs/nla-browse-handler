@@ -67,4 +67,10 @@
     </jar>
   </target>
 
+  <target name="test" depends="build">
+    <exec executable="sh">
+      <arg value="-c" />
+      <arg value="java -Dfile.encoding=UTF-8 -cp 'build/deps/WEB-INF/lib/*:build/common:build/browse-indexing:build/browse-handler:libs/*:' clojure.main tests/tests.clj 2>/dev/null" />
+    </exec>
+  </target>
 </project>

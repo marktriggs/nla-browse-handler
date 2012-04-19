@@ -8,7 +8,7 @@ import java.util.*;
 import java.sql.*;
 
 
-class CreateBrowseSQLite
+public class CreateBrowseSQLite
 {
     private Connection outputDB;
 
