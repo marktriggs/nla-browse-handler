@@ -8,6 +8,7 @@ import org.apache.lucene.index.*;
 import org.apache.lucene.document.*;
 
 import au.gov.nla.util.Utils;
+import au.gov.nla.util.BrowseEntry;
 
 public class StoredFieldLeech extends Leech
 {

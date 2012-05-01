@@ -4,6 +4,7 @@ import org.apache.lucene.search.*;
 import java.io.*;
 
 import au.gov.nla.util.Normaliser;
+import au.gov.nla.util.BrowseEntry;
 
 
 public class Leech

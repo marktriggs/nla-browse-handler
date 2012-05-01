@@ -1,3 +1,5 @@
+package au.gov.nla.util;
+
 public class BrowseEntry
 {
     public byte[] key;

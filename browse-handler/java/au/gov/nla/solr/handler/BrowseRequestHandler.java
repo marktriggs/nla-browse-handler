@@ -24,6 +24,7 @@ import java.util.logging.Logger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import au.gov.nla.util.Normaliser;
+import au.gov.nla.util.BrowseEntry;
 
 class Log
 {
