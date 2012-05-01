@@ -562,8 +562,6 @@ class Browse
 
     private void populateItem (BrowseItem item) throws Exception
     {
-        Log.info ("Populating: " + item.heading);
-
         List<String> ids = bibDB.matchingIDs (item.heading);
         item.ids = ids;
         item.count = ids.size ();

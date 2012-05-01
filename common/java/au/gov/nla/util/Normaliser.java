@@ -13,10 +13,18 @@ import com.ibm.icu.text.Collator;
 
 public class Normaliser
 {
-    protected Collator collator = Collator.getInstance();
+    protected Collator collator;
 
     protected Pattern junkregexp =
         Pattern.compile ("\\([^a-z0-9\\p{L} ]\\)");
+
+
+    public Normaliser()
+    {
+        collator = Collator.getInstance();
+        // Ignore case for the purposes of comparisons.
+        collator.setStrength(Collator.SECONDARY);
+    }
 
 
     public static Normaliser getInstance () throws Exception
@@ -39,10 +47,10 @@ public class Normaliser
 
     public byte[] normalise (String s)
     {
-        s = s.replace ("(", "")
-            .replace (")", "")
-            .replace ("-", "")
-            .replaceAll (" +", " ");
+        s = s.replaceAll (" +", " ")
+            .replaceAll("-", "")
+            .replaceAll("\\p{Punct}", " ")
+            .trim();
 
         s = junkregexp.matcher (s) .replaceAll ("");
 

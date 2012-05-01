@@ -451,7 +451,7 @@
     <str name="scopeNoteField">scope_note</str>
 
 
-    <str name="sources">topic,author,title,lcc,dewey</str>
+    <str name="sources">topic,author,title,lcc,dewey,sample0,sample1,sample2,sample3,sample4,sample5,sample6,sample7,sample8,sample9,sample10,sample11,sample12,sample13,sample14,sample15,sample16,sample17,sample18,sample19,sample20</str>
 
     <lst name="topic">
       <str name="DBpath">${solr.solr.home:./solr}/topic_browse.db</str>
@@ -465,6 +465,111 @@
 
     <lst name="title">
       <str name="DBpath">${solr.solr.home:./solr}/title_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample0">
+      <str name="DBpath">${solr.solr.home:./solr}/sample0_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample1">
+      <str name="DBpath">${solr.solr.home:./solr}/sample1_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample2">
+      <str name="DBpath">${solr.solr.home:./solr}/sample2_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample3">
+      <str name="DBpath">${solr.solr.home:./solr}/sample3_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample4">
+      <str name="DBpath">${solr.solr.home:./solr}/sample4_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample5">
+      <str name="DBpath">${solr.solr.home:./solr}/sample5_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample6">
+      <str name="DBpath">${solr.solr.home:./solr}/sample6_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample7">
+      <str name="DBpath">${solr.solr.home:./solr}/sample7_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample8">
+      <str name="DBpath">${solr.solr.home:./solr}/sample8_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample9">
+      <str name="DBpath">${solr.solr.home:./solr}/sample9_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample10">
+      <str name="DBpath">${solr.solr.home:./solr}/sample10_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample11">
+      <str name="DBpath">${solr.solr.home:./solr}/sample11_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample12">
+      <str name="DBpath">${solr.solr.home:./solr}/sample12_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample13">
+      <str name="DBpath">${solr.solr.home:./solr}/sample13_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample14">
+      <str name="DBpath">${solr.solr.home:./solr}/sample14_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample15">
+      <str name="DBpath">${solr.solr.home:./solr}/sample15_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample16">
+      <str name="DBpath">${solr.solr.home:./solr}/sample16_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample17">
+      <str name="DBpath">${solr.solr.home:./solr}/sample17_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample18">
+      <str name="DBpath">${solr.solr.home:./solr}/sample18_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample19">
+      <str name="DBpath">${solr.solr.home:./solr}/sample19_browse.db</str>
+      <str name="field">title_fullStr</str>
+    </lst>
+
+    <lst name="sample20">
+      <str name="DBpath">${solr.solr.home:./solr}/sample20_browse.db</str>
       <str name="field">title_fullStr</str>
     </lst>
 
