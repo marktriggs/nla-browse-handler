@@ -7,10 +7,12 @@ import org.apache.lucene.store.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.document.*;
 
+import au.gov.nla.util.Utils;
+
 public class StoredFieldLeech extends Leech
 {
     int currentDoc = 0;
-    LinkedList<String[]> buffer;
+    LinkedList<BrowseEntry> buffer;
 
     String sortField;
     String valueField;
@@ -22,8 +24,8 @@ public class StoredFieldLeech extends Leech
     {
         super (indexPath, field);
 
-        sortField = getEnvironment ("SORTFIELD");
-        valueField = getEnvironment ("VALUEFIELD");
+        sortField = Utils.getEnvironment ("SORTFIELD");
+        valueField = Utils.getEnvironment ("VALUEFIELD");
 
         if (sortField == null || valueField == null) {
             throw new IllegalArgumentException ("Both SORTFIELD and " +
@@ -44,7 +46,7 @@ public class StoredFieldLeech extends Leech
 
 
         reader = IndexReader.open (FSDirectory.open (new File (indexPath)));
-        buffer = new LinkedList<String[]> ();
+        buffer = new LinkedList<BrowseEntry> ();
     }
 
 
@@ -57,12 +59,12 @@ public class StoredFieldLeech extends Leech
         String[] value = doc.getValues (valueField);
 
         if (sort_key.length == 1 && value.length == 1) {
-            buffer.add (new String[] {buildSortKey(sort_key[0]), value[0]});
+            buffer.add (new BrowseEntry(buildSortKey(sort_key[0]), value[0]));
         }
     }
 
 
-    public String[] next () throws Exception
+    public BrowseEntry next () throws Exception
     {
         while (buffer.isEmpty ()) {
             if (currentDoc < reader.maxDoc ()) {

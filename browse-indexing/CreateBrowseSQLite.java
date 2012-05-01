@@ -7,13 +7,15 @@ import java.util.*;
 
 import java.sql.*;
 
+// Note that this version is coming from Solr!
+import org.apache.commons.codec.binary.Base64;
+
 
 public class CreateBrowseSQLite
 {
     private Connection outputDB;
 
     private String KEY_SEPARATOR = "\1";
-    private String RECORD_SEPARATOR = "\2";
 
 
     /*
@@ -66,7 +68,9 @@ public class CreateBrowseSQLite
         while ((line = readCRLFLine (br)) != null) {
             int sep = line.indexOf (KEY_SEPARATOR.charAt (0));
             if (sep >= 0) {
-                prep.setString (1, line.substring (0, sep));
+
+                byte[] key = Base64.decodeBase64 (line.substring (0, sep).getBytes());
+                prep.setBytes (1, key);
                 prep.setString (2, line.substring (sep + 1));
 
                 prep.addBatch ();

@@ -38,15 +38,15 @@
       (.addDocument iw (heading-document field-name heading)))))
 
 
-
-
-(defn do-browse [server browse-type & [from]]
+(defn do-browse [server browse-type & [opts]]
   (mapv #(.get % "heading")
         (-> (.query server
                     (doto (SolrQuery.)
                       (.setQueryType "/browse")
                       (.setParam "source" (into-array [browse-type]))
-                      (.setParam "rows" (into-array ["100"]))))
+                      (.setParam "rows" (into-array ["100"]))
+                      (.setParam "from" (into-array [(or (:from opts)
+                                                         "")]))))
             .getResponse
             (.get "Browse")
             (.get "items"))))
@@ -135,9 +135,25 @@
              (do-browse server "title")
              ["AAA" "Äardvark" "Apple" "Banana" "grapefruit" "Orange"]))
 
+        (is (=
+             (do-browse server "title" {:from "App"})
+             ["Apple" "Banana" "grapefruit" "Orange"]))
+
+        (is (=
+             (do-browse server "title" {:from "Äard"})
+             ["Äardvark" "Apple" "Banana" "grapefruit" "Orange"]))
+
+        (is (=
+             (do-browse server "title" {:from "eggplant"})
+             ["grapefruit" "Orange"]))
+
+        (is (=
+             (do-browse server "title" {:from "aardvark"})
+             ["Äardvark" "Apple" "Banana" "grapefruit" "Orange"]))
+
         (println "\n====== Tests complete ======\n")
-        (.shutdown core)
-        )
+
+        (.shutdown core))
 
 
 

@@ -23,6 +23,8 @@ import org.apache.lucene.document.*;
 import java.util.logging.Logger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import au.gov.nla.util.Normaliser;
+
 class Log
 {
     private static Logger log ()
@@ -52,12 +54,14 @@ class HeadingsDB
     String path;
     long dbVersion;
     int totalCount;
+    Normaliser normaliser;
 
     ReentrantReadWriteLock dbLock = new ReentrantReadWriteLock ();
 
     public HeadingsDB (String path) throws Exception
     {
         this.path = path;
+        normaliser = Normaliser.getInstance ();
     }
 
 
@@ -142,7 +146,7 @@ class HeadingsDB
             "order by key " +
             "limit 1");
 
-        rowStmnt.setString (1, from);
+        rowStmnt.setBytes (1, normaliser.normalise (from));
 
         ResultSet rs = rowStmnt.executeQuery ();
 
@@ -785,11 +789,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
             source.browse.reopenDatabasesIfUpdated ();
 
             if (from != null) {
-                rowid = (source.browse.getId
-                         (clean (from,
-                                 (source.ignoreDiacritics != null &&
-                                  source.ignoreDiacritics.equals ("yes")),
-                                 source.dropChars)));
+                rowid = (source.browse.getId (from));
             }
 
 
