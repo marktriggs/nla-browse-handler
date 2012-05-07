@@ -17,7 +17,7 @@ import java.sql.*;
 
 class PrintBrowseHeadings
 {
-    static int MAX_PREFERRED_HEADINGS = 1000;
+    static int MAX_PREFERRED_HEADINGS = 100000;
 
     private Leech bibLeech;
     private Leech authLeech;
@@ -71,7 +71,7 @@ class PrintBrowseHeadings
             (new TermQuery (new Term (System.getProperty ("field.insteadof", "insteadOf"), heading)),
              MAX_PREFERRED_HEADINGS);
 
-        for (int i = 0; i < hits.totalHits; i++) {
+        for (int i = 0; i < hits.scoreDocs.length; i++) {
             Document doc = authSearcher.getIndexReader ().document (hits.scoreDocs[i].doc);
 
             String[] preferred = doc.getValues (System.getProperty ("field.preferred", "preferred"));
