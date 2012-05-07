@@ -62,7 +62,12 @@
       <fileset dir="${builddir}/browse-indexing/"/>
       <fileset dir="${builddir}/common/"/>
       <zipgroupfileset dir="${builddir}/deps/" includes="**/lucene-core*.jar"/>
-      <zipgroupfileset dir="libs" includes="*.jar"/>
+      <zipgroupfileset dir="libs">
+        <include name="commons-codec-1.5.jar"/>
+        <include name="icu4j-49.1.jar"/>
+        <include name="marc4j.jar"/>
+        <include name="sqlitejdbc-v053.jar"/>
+      </zipgroupfileset>
     </jar>
   </target>
 
