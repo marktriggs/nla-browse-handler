@@ -57,7 +57,6 @@
     <jar destfile="browse-handler.jar">
       <fileset dir="${builddir}/browse-handler/"/>
       <fileset dir="${builddir}/common/"/>
-      <zipgroupfileset dir="libs" includes="*.jar"/>
     </jar>
     <jar destfile="browse-indexing.jar">
       <fileset dir="${builddir}/browse-indexing/"/>
