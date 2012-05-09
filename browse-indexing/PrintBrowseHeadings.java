@@ -17,8 +17,6 @@ import java.sql.*;
 
 class PrintBrowseHeadings
 {
-    static int MAX_PREFERRED_HEADINGS = 100000;
-
     private Leech bibLeech;
     private Leech authLeech;
     private Leech nonprefAuthLeech;
@@ -57,7 +55,7 @@ class PrintBrowseHeadings
     {
         TotalHitCountCollector counter = new TotalHitCountCollector();
 
-        bibSearcher.search (new TermQuery (new Term (luceneField, heading)),
+        bibSearcher.search (new ConstantScoreQuery(new TermQuery (new Term (luceneField, heading))),
                             counter);
 
         return counter.getTotalHits ();
@@ -67,9 +65,26 @@ class PrintBrowseHeadings
     private boolean isLinkedFromBibData (String heading)
         throws IOException
     {
-        TopDocs hits = authSearcher.search
-            (new TermQuery (new Term (System.getProperty ("field.insteadof", "insteadOf"), heading)),
-             MAX_PREFERRED_HEADINGS);
+        TopDocs hits = null;
+
+        int max_headings = 20;
+        while (true) {
+            hits = authSearcher.search
+                (new ConstantScoreQuery
+                 (new TermQuery
+                  (new Term
+                   (System.getProperty ("field.insteadof", "insteadOf"),
+                    heading))),
+                 max_headings);
+
+            if (hits.scoreDocs.length < max_headings) {
+                // That's all of them.  All done.
+                break;
+            } else {
+                // Hm.  That's a lot of headings.  Go back for more.
+                max_headings *= 2;
+            }
+        }
 
         for (int i = 0; i < hits.scoreDocs.length; i++) {
             Document doc = authSearcher.getIndexReader ().document (hits.scoreDocs[i].doc);

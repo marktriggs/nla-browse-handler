@@ -56,7 +56,8 @@ public class Leech
     private boolean termExists (Term t)
     {
         try {
-            return (this.searcher.search (new TermQuery (t), 1).totalHits > 0);
+            return (this.searcher.search (new ConstantScoreQuery(new TermQuery (t)),
+                                          1).totalHits > 0);
         } catch (IOException e) {
             return false;
         }
