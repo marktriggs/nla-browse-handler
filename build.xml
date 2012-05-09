@@ -23,7 +23,7 @@
   </target>
 
 
-  <target name="build" depends="setup, build-common, build-handler, build-indexing">
+  <target name="build" depends="clean, setup, build-common, build-handler, build-indexing">
   </target>
 
   <target name="build-common">
