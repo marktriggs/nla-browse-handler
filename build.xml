@@ -51,6 +51,8 @@
 
   <target name="clean">
     <delete dir="${builddir}"/>
+    <delete file="browse-handler.jar"/>
+    <delete file="browse-indexing.jar"/>
   </target>
 
   <target name="jars" depends="build">
