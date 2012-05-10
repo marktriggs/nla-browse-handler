@@ -243,7 +243,8 @@ class LuceneDB
             searcher.close ();
         }
 
-        searcher = new IndexSearcher (FSDirectory.open (new File (dbpath)));
+        IndexReader dbReader = IndexReader.open(FSDirectory.open (new File (dbpath)));
+        searcher = new IndexSearcher (dbReader);
         currentVersion = indexVersion ();
     }
 
@@ -673,6 +674,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
         for (String source : Arrays.asList (solrParams.get
                                             ("sources").split (","))) {
+            @SuppressWarnings("unchecked")
             NamedList<String> entry = (NamedList<String>)args.get (source);
 
             sources.put (source,

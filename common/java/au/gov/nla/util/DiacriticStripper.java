@@ -15,16 +15,19 @@ public class DiacriticStripper
             Class normalizer = Class.forName ("java.text.Normalizer");
             Class normalizerForm = Class.forName ("java.text.Normalizer$Form");
 
+            @SuppressWarnings("unchecked")
             Method normalize = normalizer.getMethod ("normalize",
                                                      Class.forName ("java.lang.CharSequence"),
                                                      normalizerForm);
 
+            @SuppressWarnings("unchecked")
             Method getForm = normalizerForm.getMethod ("valueOf",
                                                        Class.forName ("java.lang.String"));
 
             return (String)normalize.invoke (null, s, getForm.invoke (null, "NFKD"));
         } catch (ClassNotFoundException e) {
             Class normalizer = Class.forName ("sun.text.Normalizer");
+            @SuppressWarnings("unchecked")
             Method normalize = normalizer.getMethod ("normalize",
                                                      Class.forName ("java.lang.String"),
                                                      Class.forName ("sun.text.Normalizer$Mode"),

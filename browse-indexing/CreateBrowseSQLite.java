@@ -40,7 +40,7 @@ class CreateBrowseSQLite
                     }
 
                     // Must have been an embedded carriage return.  Keep it.
-                    sb.append((char) '\r');
+                    sb.append('\r');
                 }
 
                 sb.append((char) ch);

@@ -40,13 +40,18 @@ class IndexAuth
         InputStream in = new FileInputStream (dataFile);
         MarcReader reader = new MarcStreamReader (in);
 
+        StandardAnalyzer analyzer = (new StandardAnalyzer
+                                     (org.apache.lucene.util.Version.LUCENE_30));
+
         IndexWriter iw = new IndexWriter (FSDirectory.open (new File (indexDir)),
-                                          new StandardAnalyzer (org.apache.lucene.util.Version.LUCENE_29),
-                                          IndexWriter.MaxFieldLength.UNLIMITED);
+                                          new IndexWriterConfig(org.apache.lucene.util.Version.LUCENE_30,
+                                                                analyzer));
 
         while (reader.hasNext ()) {
             Document doc = new Document ();
             Record record = reader.next ();
+
+            @SuppressWarnings("unchecked")
             List<DataField> fields = record.getDataFields ();
 
             for (DataField f : fields) {
