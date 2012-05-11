@@ -32,6 +32,10 @@
       <classpath refid="classpath"/>
       <compilerarg value="-Xlint"/>
     </javac>
+    <exec executable="sh" output="${builddir}/common/VERSION">
+      <arg value="-c"/>
+      <arg value="which git >/dev/null 2>&amp;1 &amp;&amp; git log --oneline -1"/>
+    </exec>
   </target>
 
 
