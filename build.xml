@@ -15,6 +15,7 @@
   <target name="setup">
     <mkdir dir="${builddir}"/>
     <mkdir dir="${builddir}/deps"/>
+    <mkdir dir="${builddir}/bundled-deps"/>
     <antcall target="setup-solr-war"/>
   </target>
 
@@ -62,7 +63,17 @@
     <delete file="browse-indexing.jar"/>
   </target>
 
-  <target name="jars" depends="build">
+  <target name="bundledeps" if="bundle.deps">
+    <copy todir="${builddir}/bundled-deps">
+      <fileset dir="libs">
+        <include name="icu4j-49.1.jar"/>
+        <include name="marc4j.jar"/>
+        <include name="sqlitejdbc-v053.jar"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="jars" depends="build,bundledeps">
     <jar destfile="browse-handler.jar">
       <fileset dir="${builddir}/browse-handler/"/>
       <fileset dir="${builddir}/common/"/>
@@ -73,10 +84,8 @@
       <zipgroupfileset dir="${builddir}/deps/" includes="**/lucene-core*.jar"/>
       <zipgroupfileset dir="libs">
         <include name="commons-codec-1.5.jar"/>
-        <include name="icu4j-49.1.jar"/>
-        <include name="marc4j.jar"/>
-        <include name="sqlitejdbc-v053.jar"/>
       </zipgroupfileset>
+      <zipgroupfileset dir="${builddir}/bundled-deps" includes="*.jar"/>
     </jar>
   </target>
 
