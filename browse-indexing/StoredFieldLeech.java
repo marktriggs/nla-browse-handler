@@ -61,8 +61,15 @@ public class StoredFieldLeech extends Leech
         String[] sort_key = doc.getValues (sortField);
         String[] value = doc.getValues (valueField);
 
-        if (sort_key.length == 1 && value.length == 1) {
-            buffer.add (new BrowseEntry(buildSortKey(sort_key[0]), value[0]));
+        if (sort_key.length == value.length) {
+            for (int i = 0; i < value.length; i++) {
+                buffer.add (new BrowseEntry(buildSortKey(sort_key[i]),
+                                            value[i]));
+            }
+        } else {
+            System.err.println("Skipped entries for docid " + docid +
+                               " because the number of sort keys didn't" +
+                               " match the number of stored values.");
         }
     }
 
