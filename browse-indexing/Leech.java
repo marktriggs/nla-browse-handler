@@ -84,7 +84,11 @@ public class Leech
                 AtomicReader ir = subreaders.pop();
 
                 Terms terms = ir.terms(this.field);
-                tenum = terms.iterator(null);
+                if (terms != null) {
+                		tenum = terms.iterator(null);
+                } else {
+                		return null;
+                }
             } else {
                 return null;
             }
