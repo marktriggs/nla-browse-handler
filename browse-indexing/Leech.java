@@ -85,9 +85,9 @@ public class Leech
 
                 Terms terms = ir.terms(this.field);
                 if (terms != null) {
-                		tenum = terms.iterator(null);
+                    tenum = terms.iterator(null);
                 } else {
-                		return null;
+                    return null;
                 }
             } else {
                 return null;
