@@ -10,13 +10,12 @@ import au.gov.nla.util.BrowseEntry;
 
 public class Leech
 {
-    protected IndexReader reader;
+    protected CompositeReader reader;
     protected IndexSearcher searcher;
 
     private String field;
     private Normaliser normaliser;
 
-    private LinkedList<AtomicReader> subreaders;
     TermsEnum tenum = null;
 
 
@@ -28,23 +27,6 @@ public class Leech
         this.field = field;
 
         normaliser = Normaliser.getInstance ();
-
-        subreaders = new LinkedList<AtomicReader>();
-
-        findAtomicReaders(reader, subreaders);
-    }
-
-
-    private void findAtomicReaders(IndexReader reader,
-                                   LinkedList<AtomicReader> atomicReaders)
-    {
-        if (reader instanceof AtomicReader) {
-            atomicReaders.add((AtomicReader) reader);
-        } else {
-            for (IndexReader ir : ((CompositeReader) reader).getSequentialSubReaders ()) {
-                findAtomicReaders(ir, atomicReaders);
-            }
-        }
     }
 
 
@@ -73,27 +55,15 @@ public class Leech
 
     // Return the next term from the currently selected TermEnum, if there is one.  Null otherwise.
     //
-    // If there's no currently selected TermEnum, create one from the next subreader in the list.
-    //
-    // If the currently selected TermEnum has no remaining terms, move on to the next subreader.
+    // If there's no currently selected TermEnum, create one from the reader.
     //
     public BrowseEntry next () throws Exception
     {
         if (tenum == null) {
-            if (!subreaders.isEmpty()) {
-                AtomicReader ir = subreaders.pop();
-
-                Terms terms = ir.terms(this.field);
-                if (terms != null) {
-                    tenum = terms.iterator(null);
-                } else {
-                    return null;
-                }
-            } else {
-                return null;
-            }
+            AtomicReader ir = new SlowCompositeReaderWrapper(reader);
+            Terms terms = ir.terms(this.field);
+            tenum = terms.iterator(null);
         }
-
 
         if (tenum.next() != null) {
             String termText = tenum.term().utf8ToString();
@@ -104,8 +74,7 @@ public class Leech
                 return this.next();
             }
         } else {
-            tenum = null;
-            return this.next();
+            return null;
         }
     }
 }
