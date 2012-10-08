@@ -62,6 +62,9 @@ public class Leech
         if (tenum == null) {
             AtomicReader ir = new SlowCompositeReaderWrapper(reader);
             Terms terms = ir.terms(this.field);
+            if (terms == null) {
+            	  return null;
+            }
             tenum = terms.iterator(null);
         }
 
