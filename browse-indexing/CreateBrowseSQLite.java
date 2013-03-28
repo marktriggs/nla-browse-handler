@@ -62,7 +62,7 @@ public class CreateBrowseSQLite
         outputDB.setAutoCommit (false);
 
         PreparedStatement prep = outputDB.prepareStatement (
-            "insert or ignore into all_headings (key, heading) values (?, ?)");
+            "insert or ignore into all_headings (key, heading, building) values (?, ?, ?)");
 
         String line;
         while ((line = readCRLFLine (br)) != null) {
@@ -71,7 +71,10 @@ public class CreateBrowseSQLite
 
                 byte[] key = Base64.decodeBase64 (line.substring (0, sep).getBytes());
                 prep.setBytes (1, key);
-                prep.setString (2, line.substring (sep + 1));
+
+                int sep2 = line.indexOf (KEY_SEPARATOR.charAt (0), sep + 1);
+                prep.setString (2, line.substring (sep + 1, sep2));
+                prep.setString (3, line.substring (sep2 + 1));
 
                 prep.addBatch ();
             }
@@ -98,13 +101,21 @@ public class CreateBrowseSQLite
         Statement stat = outputDB.createStatement ();
 
         stat.executeUpdate ("drop table if exists all_headings;");
-        stat.executeUpdate ("create table all_headings (key, heading);");
+        stat.executeUpdate ("create table all_headings (key, heading, building);");
         stat.executeUpdate ("PRAGMA synchronous = OFF;");
         stat.execute ("PRAGMA journal_mode = OFF;");
 
         stat.close ();
     }
 
+    // Hoping this helps to build large databases
+    private void createKeyIndex ()
+        throws Exception
+    {
+        Statement stat = outputDB.createStatement ();
+        stat.executeUpdate ("create index allkeyindex on all_headings (key);");
+        stat.close ();
+    }
 
     private void buildOrderedTables ()
         throws Exception
@@ -113,9 +124,20 @@ public class CreateBrowseSQLite
 
         stat.executeUpdate ("drop table if exists headings;");
         stat.executeUpdate ("create table headings " +
-                            "as select * from all_headings order by key;");
+                             "as select * from all_headings order by key;");
 
         stat.executeUpdate ("create index keyindex on headings (key);");
+
+        stat.close ();
+    }
+
+    private void dropAllHeadingsTable ()
+        throws Exception
+    {
+        Statement stat = outputDB.createStatement ();
+
+        stat.executeUpdate ("drop table if exists all_headings;");
+        stat.executeUpdate ("vacuum;");
 
         stat.close ();
     }
@@ -136,7 +158,9 @@ public class CreateBrowseSQLite
 
         br.close ();
 
+        createKeyIndex ();
         buildOrderedTables ();
+        dropAllHeadingsTable ();
     }
 
 

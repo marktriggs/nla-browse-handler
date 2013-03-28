@@ -60,7 +60,7 @@ public class Leech
             if (termExists (tenum.term ())) {
                 String term = tenum.term ().text ();
                 tenum.next ();
-                return new BrowseEntry (buildSortKey (term), term);
+                return new BrowseEntry (buildSortKey (term), term, null);
             } else {
                 tenum.next ();
                 return this.next ();

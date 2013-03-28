@@ -40,14 +40,34 @@ class Log
 }
 
 
-
+/*
+ *
+ * This class stores the list of headings retrieves from
+ * a solr index.
+ *
+ * It also contains 
+ *     startRow
+ *        This rowid is used as the seed to browse previous
+ *     endRow
+ *        This rowid is used as the seed to browse forward
+ *     total
+ *        The total number of headings in the list
+ *
+ */
 class HeadingSlice
 {
-    public List<String> headings = new LinkedList<String> ();
+    public LinkedList<String> headings = new LinkedList<String> ();
+    public int startRow;
+    public int endRow;
     public int total;
 }
 
 
+/*
+ *
+ * This is the interface to the sqlite database
+ *
+ */
 
 class HeadingsDB
 {
@@ -98,6 +118,11 @@ class HeadingsDB
     }
 
 
+    /*
+     *
+     * Sees that the browse index was rebuilt and opens new database???
+     *
+     */
     synchronized public void reopenIfUpdated () throws Exception
     {
         dbLock.readLock ().lock ();
@@ -139,43 +164,110 @@ class HeadingsDB
     }
 
 
-    public int getHeadingStart (String from) throws Exception
+    /*
+     *
+     * This function finds the starting row in the database when a string is passed
+     * To the interface
+     *
+     * Parameters
+     *    from      - the string to use to locate the heading
+     *    building  - a colon separated list of building codes used to limit the search
+     *
+     * Returns the rowid to start the list of headings
+     *
+     */
+    public int getHeadingStart (String from, String building) throws Exception
     {
-        PreparedStatement rowStmnt = db.prepareStatement (
-            "select rowid from headings " +
-            "where key >= ? " +
-            "order by key " +
-            "limit 1");
+
+        int rowidResult;
+        String[] tmp_build;
+        String delimiter = ":";
+        String sql_statement =  "select rowid from headings where key < ? and building ";
+
+        tmp_build = building.split(delimiter);
+        if (tmp_build.length > 1) {
+            sql_statement += "in (";
+            for (int i = 0; i < tmp_build.length;) {
+                sql_statement += "?";
+                if (++i < tmp_build.length) {
+                    sql_statement += ", ";
+                }
+            }
+            sql_statement += ") order by key desc limit 1";
+        } else {
+            sql_statement += "= ? order by key desc limit 1";
+        }
+
+        PreparedStatement rowStmnt = db.prepareStatement (sql_statement);
 
         rowStmnt.setBytes (1, normaliser.normalise (from));
+        if (!((building == null) || (building == ""))) {
+            for (int j = 0; j < tmp_build.length; j++) {
+                rowStmnt.setString (j + 2, tmp_build[j]);
+            }
+        }
 
         ResultSet rs = rowStmnt.executeQuery ();
 
         if (rs.next ()) {
-            return rs.getInt ("rowid");
+            rowidResult = rs.getInt ("rowid");
         } else {
-            return totalCount + 1;   // past the end
+            rowidResult = totalCount + 1;   // past the end
         }
+
+        Log.info ("Returning rowid: " + rowidResult + " on search for: " + from);
+
+        return rowidResult;
     }
 
 
+    /*
+     *
+     * This function retrieves the list of browse headings from the sqlite db
+     *
+     * Parameters
+     *    rowid     - entry point to start the list
+     *    rows      - number of entries to return
+     *    building  - colon separated list of building codes to limit the list to
+     *
+     */
     public HeadingSlice getHeadings (int rowid,
-                                     int rows)
+                                     int rows,
+                                     String building)
         throws Exception
     {
         HeadingSlice result = new HeadingSlice ();
+        String[] tmp_build;
+        String delimiter = ":";
+        String sql_statement =  "select rowid, * from headings where rowid >= ? and building ";
+        int resultCounter = 0;
+        int lastRowid = rowid;
+        result.startRow = rowid;
 
-        PreparedStatement rowStmnt = db.prepareStatement (
-            String.format ("select * from headings " +
-                           "where rowid >= ? " +
-                           "order by rowid " +
-                           "limit %d ",
-                           rows)
-            );
+        tmp_build = building.split(delimiter);
+        if (tmp_build.length > 1) {
+            sql_statement += "in (";
+            for (int i = 0; i < tmp_build.length;) {
+                sql_statement += "?";
+                if (++i < tmp_build.length) {
+                    sql_statement += ", ";
+                }
+            }
+            sql_statement += ") order by rowid limit " + Integer.toString(rows);
+        } else {
+            sql_statement += "= ? order by rowid limit " + Integer.toString(rows);
+        }
+
+
+        PreparedStatement rowStmnt = db.prepareStatement (sql_statement);
 
         rowStmnt.setInt (1, rowid);
+        for (int j = 0; j < tmp_build.length; j++) {
+            rowStmnt.setString (j + 2, tmp_build[j]);
+        }
 
         ResultSet rs = null;
+        // Log.info ("totalCount is: " + totalCount + " and rowid is: " + rowid);
 
         for (int attempt = 0; attempt < 3; attempt++) {
             try {
@@ -193,19 +285,103 @@ class HeadingsDB
 
         while (rs.next ()) {
             result.headings.add (rs.getString ("heading"));
+            lastRowid = rs.getInt("rowid");
+            resultCounter++;
         }
 
         rs.close ();
         rowStmnt.close ();
 
-        result.total = (totalCount - rowid) + 1;
+        result.total = resultCounter;
+        result.endRow = lastRowid;
+
+        return result;
+    }
+
+    /*
+     *
+     * This function retrieves the list of browse headings from the sqlite db
+     *
+     * Parameters
+     *    rowid     - entry point to end the list
+     *    rows      - number of entries to return
+     *    building  - colon separated list of building codes to limit the list to
+     *
+     */
+    public HeadingSlice getHeadingsPrevious (int rowid,
+                                             int rows,
+                                             String building)
+        throws Exception
+    {
+        HeadingSlice result = new HeadingSlice ();
+        String[] tmp_build;
+        String delimiter = ":";
+        String sql_statement =  "select rowid, * from headings where rowid <= ? and building ";
+        int resultCounter = 0;
+        int lastRowid = rowid;
+        result.endRow = rowid;
+
+        tmp_build = building.split(delimiter);
+        if (tmp_build.length > 1) {
+            sql_statement += "in (";
+            for (int i = 0; i < tmp_build.length;) {
+                sql_statement += "?";
+                if (++i < tmp_build.length) {
+                    sql_statement += ", ";
+                }
+            }
+            sql_statement += ") order by rowid desc limit " + Integer.toString(rows);
+        } else {
+            sql_statement += "= ? order by rowid desc limit " + Integer.toString(rows);
+        }
+
+
+        PreparedStatement rowStmnt = db.prepareStatement (sql_statement);
+
+        rowStmnt.setInt (1, rowid);
+        for (int j = 0; j < tmp_build.length; j++) {
+            rowStmnt.setString (j + 2, tmp_build[j]);
+        }
+
+        ResultSet rs = null;
+        // Log.info ("totalCount is: " + totalCount + " and rowid is: " + rowid);
+
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                rs = rowStmnt.executeQuery ();
+                break;
+            } catch (SQLException e) {
+                Log.info ("Retry number " + attempt + "...");
+                Thread.sleep (50);
+            }
+        }
+
+        if (rs == null) {
+            return result;
+        }
+
+        //  Need to add these in reverse order
+        while (rs.next ()) {
+            result.headings.addFirst (rs.getString ("heading"));
+            lastRowid = rs.getInt("rowid");
+            resultCounter++;
+        }
+
+        rs.close ();
+        rowStmnt.close ();
+
+        result.total = resultCounter;
+        result.startRow = lastRowid;
 
         return result;
     }
 }
 
-
-
+/*
+ *
+ *  Interface to the Solr Lucene DB
+ *
+ */
 class LuceneDB
 {
     static Map<String,LuceneDB> dbs = new HashMap<String,LuceneDB> ();
@@ -260,6 +436,12 @@ class LuceneDB
     }
 
 
+    public TopDocs search (Query q, Filter fq, int n) throws Exception
+    {
+        return searcher.search (q, fq, n);
+    }
+
+
     private long indexVersion ()
     {
         return new File (dbpath + "/segments.gen").lastModified ();
@@ -289,6 +471,11 @@ class LuceneDB
 
 
 
+/*
+ *
+ * Interface to the Solr Authority DB
+ *
+ */
 class AuthDB
 {
     static int MAX_PREFERRED_HEADINGS = 1000;
@@ -401,6 +588,11 @@ class AuthDB
 
 
 
+/*
+ *
+ * Interface to the Solr biblio db
+ *
+ */
 class BibDB
 {
     private IndexSearcher db;
@@ -418,25 +610,35 @@ class BibDB
     {
         TermQuery q = new TermQuery (new Term (field, heading));
 
-        Log.info ("Searching '" + field + "' for '" + "'" + heading + "'");
-
         TotalHitCountCollector counter = new TotalHitCountCollector();
         db.search (q, counter);
-
-        Log.info ("Hits: " + counter.getTotalHits ());
 
         return counter.getTotalHits ();
     }
 
 
-    public List<String> matchingIDs (String heading)
+    /*
+     *
+     * Function to retrieve the solr ids when there is no building limit
+     *
+     * Need to add a filter query to limit the results from Solr
+     *
+     * I think this is where we would add the functionality to retrieve additional info
+     * like titles for call numbers, possibly ISBNs
+     *
+     */
+    public Map<String, List<String>> matchingIDs (String heading, String extras)
         throws Exception
     {
+        // Log.info ("We are searching: " + field + " on: " + heading);
         TermQuery q = new TermQuery (new Term (field, heading));
 
-        Log.info (System.currentTimeMillis () + " Searching '" + field + "' for '" + heading + "'");
-
-        final List<String> ids = new ArrayList<String> ();
+        final Map<String, List<String>> bibinfo = new HashMap<String,List<String>> ();
+        bibinfo.put ("ids", new ArrayList<String> ());
+        final String[] bibExtras = extras.split(":");
+        for (int i = 0; i < bibExtras.length; i++) {
+            bibinfo.put (bibExtras[i], new ArrayList<String> ());
+        }
 
         db.search (q, new Collector () {
                 private int docBase;
@@ -450,11 +652,19 @@ class BibDB
 
                 public void collect (int docnum) {
                     int docid = docnum + docBase;
+                    // Log.info ("We are retrieving docid: " + docid);
                     try {
                         Document doc = db.getIndexReader ().document (docid);
 
                         String[] vals = doc.getValues ("id");
-                        ids.add (vals[0]);
+                        bibinfo.get("ids").add (vals[0]);
+                        for (int i = 0; i < bibExtras.length; i++) {
+                            vals = doc.getValues (bibExtras[i]);
+                            if (vals.length > 0) {
+                                bibinfo.get(bibExtras[i]).add (vals[0]);
+                                // Log.info ("Added " + bibExtras[i] + ": " + vals[0]);
+                            }
+                        }
                     } catch (org.apache.lucene.index.CorruptIndexException e) {
                         Log.info ("CORRUPT INDEX EXCEPTION.  EEK! - " + e);
                     } catch (Exception e) {
@@ -468,7 +678,80 @@ class BibDB
                 }
             });
 
-        return ids;
+        return bibinfo;
+    }
+
+    /*
+     *
+     * Function to retireve the doc ids when there is a building limit
+     * This retrieves the doc ids for an individual heading
+     *
+     * Need to add a filter query to limit the results from Solr
+     *
+     * I think this is where we would add the functionality to retrieve additional info
+     * like titles for call numbers, possibly ISBNs
+     *
+     */
+    public Map<String, List<String>> matchingIDs (String heading, String extras, String bLimit)
+        throws Exception
+    {
+        TermQuery q = new TermQuery (new Term (field, heading));
+        TermsFilter fq = new TermsFilter();
+
+        final Map<String, List<String>> bibinfo = new HashMap<String,List<String>> ();
+        bibinfo.put ("ids", new ArrayList<String> ());
+        final String[] bibExtras = extras.split(":");
+        for (int i = 0; i < bibExtras.length; i++) {
+            bibinfo.put (bibExtras[i], new ArrayList<String> ());
+        }
+
+        String[] values = bLimit.split(":");
+        String field = values[0];
+        for (int i = 1; i < values.length; i++) {
+            fq.addTerm(new Term(field, values[i]));
+        }
+
+        db.search (q, fq, new Collector () {
+                private int docBase;
+
+                public void setScorer (Scorer scorer) {
+                }
+
+                public boolean acceptsDocsOutOfOrder () {
+                    return true;
+                }
+
+                public void collect (int docnum) {
+                    int docid = docnum + docBase;
+                    // Log.info ("We are retrieving docid: " + docid);
+                    try {
+                        Document doc = db.getIndexReader ().document (docid);
+
+                        String[] vals = doc.getValues ("id");
+                        bibinfo.get("ids").add (vals[0]);
+                        // Log.info ("Added ids: " + vals[0]);
+                        // We only want 1
+                        for (int i = 0; i < bibExtras.length; i++) {
+                            vals = doc.getValues (bibExtras[i]);
+                            if (vals.length > 0) {
+                                bibinfo.get(bibExtras[i]).add (vals[0]);
+                                // Log.info ("Added " + bibExtras[i] + ": " + vals[0]);
+                            }
+                        }
+                    } catch (org.apache.lucene.index.CorruptIndexException e) {
+                        Log.info ("CORRUPT INDEX EXCEPTION.  EEK! - " + e);
+                    } catch (Exception e) {
+                        Log.info ("Exception thrown: " + e);
+                    }
+
+                }
+
+                public void setNextReader (IndexReader reader, int docBase) {
+                    this.docBase = docBase;
+                }
+            });
+
+        return bibinfo;
     }
 }
 
@@ -477,6 +760,8 @@ class BibDB
 class BrowseList
 {
     public int totalCount;
+    public int startRow;
+    public int endRow;
     public List<BrowseItem> items = new LinkedList<BrowseItem> ();
 
 
@@ -501,6 +786,7 @@ class BrowseItem
     public String note = "";
     public String heading;
     public List<String> ids;
+    public Map<String, List<String>> extras = new HashMap<String, List<String>> ();
     int count;
 
 
@@ -520,6 +806,7 @@ class BrowseItem
         result.put ("note", note);
         result.put ("count", new Integer (count));
         result.put ("ids", ids);
+        result.put ("extras", extras);
 
         return result;
     }
@@ -561,11 +848,14 @@ class Browse
     }
 
 
-    private void populateItem (BrowseItem item) throws Exception
+    private void populateItem (BrowseItem item, String extras) throws Exception
     {
-        List<String> ids = bibDB.matchingIDs (item.heading);
-        item.ids = ids;
-        item.count = ids.size ();
+        Map<String, List<String>> bibinfo = bibDB.matchingIDs (item.heading, extras);
+        item.ids = bibinfo.get("ids");
+        bibinfo.remove("ids");
+        item.extras = bibinfo;
+
+        item.count = item.ids.size ();
 
         Map<String, List<String>> fields = authDB.getFields (item.heading);
 
@@ -586,29 +876,76 @@ class Browse
         }
     }
 
-
-    public int getId (String from) throws Exception
+    private void populateItem (BrowseItem item, String extras, String bLimit) throws Exception
     {
-        return headingsDB.getHeadingStart (from);
+        Map<String, List<String>> bibinfo = bibDB.matchingIDs (item.heading, extras, bLimit);
+        item.ids = bibinfo.get("ids");
+        bibinfo.remove("ids");
+        item.count = item.ids.size ();
+
+        // Need to go through the map and add
+        item.extras = bibinfo;
+
+
+        Map<String, List<String>> fields = authDB.getFields (item.heading);
+
+        for (String value : fields.get ("seeAlso")) {
+            if (bibDB.recordCount (value) > 0) {
+                item.seeAlso.add (value);
+            }
+        }
+
+        for (String value : fields.get ("useInstead")) {
+            if (bibDB.recordCount (value) > 0) {
+                item.useInstead.add (value);
+            }
+        }
+
+        for (String value : fields.get ("note")) {
+            item.note = value;
+        }
     }
 
+    /*
+     *
+     * getId
+     *    This function finds the start of the browse list when given a string
+     *
+     */
+    public int getId (String from, String building) throws Exception
+    {
+        return headingsDB.getHeadingStart (from, building);
+    }
 
-    public BrowseList getList (int rowid, int offset, int rows)
+    public BrowseList getList (int rowid, int offset, int rows, String building, String bLimit, String extras)
         throws Exception
     {
         BrowseList result = new BrowseList ();
+        HeadingSlice h = new HeadingSlice ();;
 
-        HeadingSlice h = headingsDB.getHeadings (Math.max (0, rowid + offset),
-                                                 rows);
+        if (offset < 0) {
+            h = headingsDB.getHeadingsPrevious (Math.max (0, rowid), rows, building);
+        } else {
+            h = headingsDB.getHeadings (Math.max (0, rowid), rows, building);
+        }
 
         result.totalCount = h.total;
+        result.startRow = h.startRow;
+        result.endRow = h.endRow;
 
-        for (String heading : h.headings) {
-            BrowseItem item = new BrowseItem (heading);
-
-            populateItem (item);
-
-            result.items.add (item);
+        // if bLimit == null, do nothing, else split and create a Filter
+        if (!(bLimit.equals("null"))) {
+            for (String heading : h.headings) {
+                BrowseItem item = new BrowseItem (heading);
+                populateItem (item, extras, bLimit);
+                result.items.add (item);
+            }
+        } else {
+            for (String heading : h.headings) {
+                BrowseItem item = new BrowseItem (heading);
+                populateItem (item, extras);
+                result.items.add (item);
+            }
         }
 
         return result;
@@ -694,7 +1031,24 @@ public class BrowseRequestHandler extends RequestHandlerBase
             return 0;
         }
     }
-
+   
+    /*
+     *
+     * The main body that receives the parameters and returns the results
+     * Possible paramters
+     *   from     - string to start the browse
+     *   building - list of : delimited building codes to use as limit
+     *                   when searching the sqllite database
+     *   bLimit   - string to use a fq parameter when searchin the solr db
+     *   offset   - If -1 browse backward, if 0 browse forward
+     *   rows     - number of entries to return in result set
+     *   rowid    - rowid of sqllite db to use as starting point for entries
+     *                  from should be empty when this is populated
+     *   source   - sqllite database to query
+     *   json.nl  - ???? - from previous code
+     *   wt       - ???? - from previous code
+     *
+    */
 
     @Override
     public void handleRequestBody (org.apache.solr.request.SolrQueryRequest req,
@@ -708,9 +1062,19 @@ public class BrowseRequestHandler extends RequestHandlerBase
             return;
         }
 
+        // Log.info ("Starting our adventure");
 
         String sourceName = p.get ("source");
         String from = p.get ("from");
+        String building = p.get ("building");
+        String bLimit = p.get ("bLimit");
+        String extras = p.get ("extras");
+
+        // extras needs to be a non-null string
+        if (extras == null) {
+            extras = "";
+        }
+        Log.info ("extras is: " + extras );
 
         int rowid = 1;
         if (p.get ("rowid") != null) {
@@ -728,7 +1092,6 @@ public class BrowseRequestHandler extends RequestHandlerBase
         if (sourceName == null || !sources.containsKey (sourceName)) {
             throw new Exception ("Need a (valid) source parameter.");
         }
-
 
         BrowseSource source = sources.get (sourceName);
 
@@ -752,19 +1115,17 @@ public class BrowseRequestHandler extends RequestHandlerBase
             source.browse.reopenDatabasesIfUpdated ();
 
             if (from != null) {
-                rowid = (source.browse.getId (from));
+                rowid = (source.browse.getId (from, building));
             }
 
-
-            Log.info ("Browsing from: " + rowid);
-
-            BrowseList list = source.browse.getList (rowid, offset, rows);
+            BrowseList list = source.browse.getList (rowid, offset, rows, building, bLimit, extras);
 
             Map<String,Object> result = new HashMap<String, Object> ();
 
             result.put ("totalCount", list.totalCount);
             result.put ("items", list.asMap ());
-            result.put ("startRow", rowid);
+            result.put ("startRow", list.startRow);
+            result.put ("endRow", list.endRow);
             result.put ("offset", offset);
 
             rsp.add ("Browse", result);

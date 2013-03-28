@@ -68,7 +68,7 @@
       <fileset dir="libs">
         <include name="icu4j-49.1.jar"/>
         <include name="marc4j.jar"/>
-        <include name="sqlitejdbc-v053.jar"/>
+        <include name="sqlite-jdbc-3.7.15-SNAPSHOT.jar"/>
       </fileset>
     </copy>
   </target>
@@ -84,6 +84,8 @@
       <zipgroupfileset dir="${builddir}/deps/" includes="**/lucene-core*.jar"/>
       <zipgroupfileset dir="libs">
         <include name="commons-codec-1.5.jar"/>
+        <include name="icu4j-49.1.jar"/>
+        <include name="sqlite-jdbc-3.7.15-SNAPSHOT.jar"/>
       </zipgroupfileset>
       <zipgroupfileset dir="${builddir}/bundled-deps" includes="*.jar"/>
     </jar>

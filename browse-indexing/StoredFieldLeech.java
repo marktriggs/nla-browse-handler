@@ -17,6 +17,7 @@ public class StoredFieldLeech extends Leech
 
     String sortField;
     String valueField;
+    String buildField;
 
     private FieldSelector fieldSelector;
 
@@ -27,6 +28,7 @@ public class StoredFieldLeech extends Leech
 
         sortField = Utils.getEnvironment ("SORTFIELD");
         valueField = Utils.getEnvironment ("VALUEFIELD");
+        buildField = Utils.getEnvironment ("BUILDFIELD");
 
         if (sortField == null || valueField == null) {
             throw new IllegalArgumentException ("Both SORTFIELD and " +
@@ -39,7 +41,8 @@ public class StoredFieldLeech extends Leech
 
                 public FieldSelectorResult accept (String fieldName) {
                     if (fieldName.equals (sortField) ||
-                        fieldName.equals (valueField)) {
+                        fieldName.equals (valueField) ||
+                        fieldName.equals (buildField)) {
                         return FieldSelectorResult.LOAD;
                     } else {
                         return FieldSelectorResult.NO_LOAD;
@@ -60,16 +63,22 @@ public class StoredFieldLeech extends Leech
 
         String[] sort_key = doc.getValues (sortField);
         String[] value = doc.getValues (valueField);
+        String[] build = doc.getValues (buildField);
 
         if (sort_key.length == value.length) {
             for (int i = 0; i < value.length; i++) {
-                buffer.add (new BrowseEntry(buildSortKey(sort_key[i]),
-                                            value[i]));
+                // Add one with building null
+                buffer.add (new BrowseEntry(buildSortKey(sort_key[i]), value[i], null));
+                for (int j = 0; j < build.length; j++) {
+                    if (build[j].length() > 0) {
+                        buffer.add (new BrowseEntry(buildSortKey(sort_key[i]), value[i], build[j]));
+                    }
+                }
             }
         } else {
-            System.err.println("Skipped entries for docid " + docid +
-                               " because the number of sort keys didn't" +
-                               " match the number of stored values.");
+            // System.err.println("Skipped entries for docid " + docid +
+            //                    " because the number of sort keys didn't" +
+            //                    " match the number of stored values.");
         }
     }
 

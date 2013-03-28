@@ -38,10 +38,12 @@ public class PrintBrowseHeadings
                                Predicate predicate)
         throws Exception
     {
+
         BrowseEntry h;
         while ((h = leech.next ()) != null) {
             byte[] sort_key = h.key;
             String heading = h.value;
+            String build = h.build;
 
             if (predicate != null &&
                 !predicate.isSatisfiedBy (heading)) {
@@ -52,6 +54,8 @@ public class PrintBrowseHeadings
                 out.print (new String (Base64.encodeBase64 (sort_key)) +
                            KEY_SEPARATOR +
                            heading +
+                           KEY_SEPARATOR +
+                           build +
                            RECORD_SEPARATOR);
             }
         }
