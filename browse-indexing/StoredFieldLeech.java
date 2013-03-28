@@ -76,9 +76,9 @@ public class StoredFieldLeech extends Leech
                 }
             }
         } else {
-            // System.err.println("Skipped entries for docid " + docid +
-            //                    " because the number of sort keys didn't" +
-            //                    " match the number of stored values.");
+            System.err.println("Skipped entries for docid " + docid +
+                               " because the number of sort keys didn't" +
+                               " match the number of stored values.");
         }
     }
 
