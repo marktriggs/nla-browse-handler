@@ -260,8 +260,7 @@ class HeadingsDB
         ResultSet rs = rowStmnt.executeQuery ();
 
         if (rs.next ()) {
-            // Add 1 here because the last row less than our key is still not the one we want.
-            rowidResult = rs.getInt ("rowid") + 1;
+            rowidResult = rs.getInt ("rowid");
         } else {
             rowidResult = totalCount + 1;   // past the end
         }
