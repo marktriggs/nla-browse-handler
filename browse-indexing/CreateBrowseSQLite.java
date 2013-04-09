@@ -7,6 +7,8 @@ import java.util.*;
 
 import java.sql.*;
 
+import au.gov.nla.util.Utils;
+
 // Note that this version is coming from Solr!
 import org.apache.commons.codec.binary.Base64;
 
@@ -137,7 +139,10 @@ public class CreateBrowseSQLite
         Statement stat = outputDB.createStatement ();
 
         stat.executeUpdate ("drop table if exists all_headings;");
-        stat.executeUpdate ("vacuum;");
+
+        if (Utils.getEnvironment ("SKIP_VACUUM") == null) {
+            stat.executeUpdate ("vacuum;");
+        }
 
         stat.close ();
     }
