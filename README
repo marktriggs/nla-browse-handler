@@ -1,5 +1,5 @@
 
-       Care and feeding of the NLA Solr browse request handler
+       Care and feeding of the VuFind Solr browse request handler
 
 			     Mark Triggs
 
@@ -8,11 +8,11 @@
 
 0.  Background
 
- This Solr plugin was developed to support the browse functionality of
- the National Library of Australia's Catalogue
- (http://catalogue.nla.gov.au).  Please read the LICENSE file that
- accompanies this file for details regarding the distribution of this
- software.
+ This Solr plugin was originally developed to support the browse
+ functionality of the National Library of Australia's Catalogue
+ (http://catalogue.nla.gov.au). It later became a standard component
+ of VuFind. Please read the LICENSE file that accompanies this file
+ for details regarding the distribution of this software.
 
 
 
