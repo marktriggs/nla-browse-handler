@@ -1,11 +1,4 @@
 
-       Care and feeding of the VuFind Solr browse request handler
-
-			     Mark Triggs
-
-	       The National Library of Australia, 2009
-
-
 0.  Background
 
  This Solr plugin was originally developed to support the browse
@@ -150,8 +143,6 @@
 
 4.  Running updates
 
- At the time of writing we are updating our authority and browse
- indexes once per night at the same time we update our bib indexes.
  The browse request handler has been designed to automatically detect
  updates to these indexes and reloads them as required.  The steps are
  simple:
