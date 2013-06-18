@@ -107,7 +107,7 @@
 
   Then configure your browse types in solrconfig.xml:
 
-    <requestHandler name="/browse" class="au.gov.nla.solr.handler.BrowseRequestHandler">
+    <requestHandler name="/browse" class="org.vufind.solr.handler.BrowseRequestHandler">
        <str name="authIndexPath">/path/to/your/authority.index</str>
        <str name="bibIndexPath">/path/to/your/bib/data/index</str>
 
