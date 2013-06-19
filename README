@@ -1,4 +1,8 @@
 
+       Care and feeding of the VuFind Solr browse request handler
+
+
+
 0.  Background
 
  This Solr plugin was originally developed to support the browse
