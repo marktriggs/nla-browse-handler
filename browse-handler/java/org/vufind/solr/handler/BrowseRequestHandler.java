@@ -289,6 +289,11 @@ class LuceneDB
 
 
 
+/*
+ *
+ * Interface to the Solr Authority DB
+ *
+ */
 class AuthDB
 {
     static int MAX_PREFERRED_HEADINGS = 1000;
@@ -401,6 +406,11 @@ class AuthDB
 
 
 
+/*
+ *
+ * Interface to the Solr biblio db
+ *
+ */
 class BibDB
 {
     private IndexSearcher db;
@@ -429,14 +439,34 @@ class BibDB
     }
 
 
-    public List<String> matchingIDs (String heading)
+    /*
+     *
+     * Function to retireve the doc ids when there is a building limit
+     * This retrieves the doc ids for an individual heading
+     *
+     * Need to add a filter query to limit the results from Solr
+     *
+     * I think this is where we would add the functionality to retrieve additional info
+     * like titles for call numbers, possibly ISBNs
+     *
+     * @param heading  string of the heading to use for finding matching docs
+     * @param extras   colon-separated string of extra Solr fields to return
+     *                 for use in the browse display
+     * @return         return a map of Solr ids and extra bib info
+     */
+    public Map<String, List<String>> matchingIDs (String heading, String extras)
         throws Exception
     {
         TermQuery q = new TermQuery (new Term (field, heading));
 
         Log.info (System.currentTimeMillis () + " Searching '" + field + "' for '" + heading + "'");
 
-        final List<String> ids = new ArrayList<String> ();
+        final Map<String, List<String>> bibinfo = new HashMap<String,List<String>> ();
+        bibinfo.put ("ids", new ArrayList<String> ());
+        final String[] bibExtras = extras.split (":");
+        for (int i = 0; i < bibExtras.length; i++) {
+            bibinfo.put (bibExtras[i], new ArrayList<String> ());
+        }
 
         db.search (q, new Collector () {
                 private int docBase;
@@ -454,7 +484,13 @@ class BibDB
                         Document doc = db.getIndexReader ().document (docid);
 
                         String[] vals = doc.getValues ("id");
-                        ids.add (vals[0]);
+                        bibinfo.get ("ids").add (vals[0]);
+                        for (int i = 0; i < bibExtras.length; i++) {
+                            vals = doc.getValues (bibExtras[i]);
+                            if (vals.length > 0) {
+                                bibinfo.get (bibExtras[i]).add (vals[0]);
+                            }
+                        }
                     } catch (org.apache.lucene.index.CorruptIndexException e) {
                         Log.info ("CORRUPT INDEX EXCEPTION.  EEK! - " + e);
                     } catch (Exception e) {
@@ -468,7 +504,7 @@ class BibDB
                 }
             });
 
-        return ids;
+        return bibinfo;
     }
 }
 
@@ -501,6 +537,7 @@ class BrowseItem
     public String note = "";
     public String heading;
     public List<String> ids;
+    public Map<String, List<String>> extras = new HashMap<String, List<String>> ();
     int count;
 
 
@@ -561,11 +598,14 @@ class Browse
     }
 
 
-    private void populateItem (BrowseItem item) throws Exception
+    private void populateItem (BrowseItem item, String extras) throws Exception
     {
-        List<String> ids = bibDB.matchingIDs (item.heading);
-        item.ids = ids;
-        item.count = ids.size ();
+        Map<String, List<String>> bibinfo = bibDB.matchingIDs (item.heading, extras);
+        item.ids = bibinfo.get ("ids");
+        bibinfo.remove ("ids");
+        item.count = item.ids.size ();
+
+        item.extras = bibinfo;
 
         Map<String, List<String>> fields = authDB.getFields (item.heading);
 
@@ -593,7 +633,7 @@ class Browse
     }
 
 
-    public BrowseList getList (int rowid, int offset, int rows)
+    public BrowseList getList (int rowid, int offset, int rows, String extras)
         throws Exception
     {
         BrowseList result = new BrowseList ();
@@ -606,7 +646,7 @@ class Browse
         for (String heading : h.headings) {
             BrowseItem item = new BrowseItem (heading);
 
-            populateItem (item);
+            populateItem (item, extras);
 
             result.items.add (item);
         }
@@ -711,6 +751,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
         String sourceName = p.get ("source");
         String from = p.get ("from");
+        String extras = p.get ("extras");
 
         int rowid = 1;
         if (p.get ("rowid") != null) {
@@ -758,7 +799,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
             Log.info ("Browsing from: " + rowid);
 
-            BrowseList list = source.browse.getList (rowid, offset, rows);
+            BrowseList list = source.browse.getList (rowid, offset, rows, extras);
 
             Map<String,Object> result = new HashMap<String, Object> ();
 
