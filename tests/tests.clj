@@ -129,7 +129,7 @@
 
       (doseq [browse test-browses]
         (println "Loading browse headings:" (:name browse))
-        (let [tmp-headings (File/createTempFile "nla-browse-handler-tests" "")
+        (let [tmp-headings (File/createTempFile "vufind-browse-handler-tests" "")
               tmpdb (file tmpdir (str (:name browse) "_browse.db"))]
           (try
             (populate-index (:headings browse) (:name browse) bib-index)
