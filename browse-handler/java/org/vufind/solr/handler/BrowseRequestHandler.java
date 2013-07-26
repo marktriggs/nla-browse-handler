@@ -459,8 +459,6 @@ class BibDB
     {
         TermQuery q = new TermQuery (new Term (field, heading));
 
-        Log.info (System.currentTimeMillis () + " Searching '" + field + "' for '" + heading + "'");
-
         final Map<String, List<String>> bibinfo = new HashMap<String,List<String>> ();
         bibinfo.put ("ids", new ArrayList<String> ());
         final String[] bibExtras = extras.split (":");
@@ -559,6 +557,7 @@ class BrowseItem
         result.put ("note", note);
         result.put ("count", new Integer (count));
         result.put ("ids", ids);
+        result.put ("extras", extras);
 
         return result;
     }
@@ -754,6 +753,11 @@ public class BrowseRequestHandler extends RequestHandlerBase
         String sourceName = p.get ("source");
         String from = p.get ("from");
         String extras = p.get ("extras");
+
+        // extras needs to be a non-null string
+	if (extras == null) {
+	    extras = "";
+	}
 
         int rowid = 1;
         if (p.get ("rowid") != null) {
