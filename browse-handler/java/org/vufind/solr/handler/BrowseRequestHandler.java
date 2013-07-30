@@ -454,16 +454,19 @@ class BibDB
      *                 for use in the browse display
      * @return         return a map of Solr ids and extra bib info
      */
-    public Map<String, List<String>> matchingIDs (String heading, String extras)
+    public Map<String, List<Collection<String>>> matchingIDs (String heading, String extras)
         throws Exception
     {
         TermQuery q = new TermQuery (new Term (field, heading));
 
-        final Map<String, List<String>> bibinfo = new HashMap<String,List<String>> ();
-        bibinfo.put ("ids", new ArrayList<String> ());
+	// bibinfo values are List<Collection> because some extra fields 
+	// may be multi-valued.
+	// Note: it may be time for bibinfo to become a class...
+        final Map<String, List<Collection<String>>> bibinfo = new HashMap<String,List<Collection<String>>> ();
+        bibinfo.put ("ids", new ArrayList<Collection<String>> ());
         final String[] bibExtras = extras.split (":");
         for (int i = 0; i < bibExtras.length; i++) {
-            bibinfo.put (bibExtras[i], new ArrayList<String> ());
+            bibinfo.put (bibExtras[i], new ArrayList<Collection<String>> ());
         }
 
         db.search (q, new Collector () {
@@ -482,11 +485,18 @@ class BibDB
                         Document doc = db.getIndexReader ().document (docid);
 
                         String[] vals = doc.getValues ("id");
-                        bibinfo.get ("ids").add (vals[0]);
+			Collection<String> id = new HashSet<String> ();
+			id.add (vals[0]);
+                        bibinfo.get ("ids").add (id);
                         for (int i = 0; i < bibExtras.length; i++) {
                             vals = doc.getValues (bibExtras[i]);
+			    // bibinfo.get (bibExtras[i]).add (vals[0]);
                             if (vals.length > 0) {
-                                bibinfo.get (bibExtras[i]).add (vals[0]);
+				Collection<String> valSet = new LinkedHashSet<String> ();
+				for (int j = 0; j< vals.length; j++) {
+				    valSet.add (vals[j]);
+				}
+                                bibinfo.get (bibExtras[i]).add (valSet);
                             }
                         }
                     } catch (org.apache.lucene.index.CorruptIndexException e) {
@@ -537,7 +547,7 @@ class BrowseItem
     public String note = "";
     public String heading;
     public List<String> ids;
-    public Map<String, List<String>> extras = new HashMap<String, List<String>> ();
+    public Map<String, List<Collection<String>>> extras = new HashMap<String, List<Collection<String>>> ();
     int count;
 
 
@@ -546,6 +556,15 @@ class BrowseItem
         this.heading = heading;
     }
 
+    // ids are gathered into List<Collection<String>>, see bibinfo in
+    // BibDB.matchingIDs() and populateItem().
+    public void setIds (List<Collection<String>> idList) {
+	ids = new ArrayList<String> ();
+	for (Collection<String> idCol : idList ) {
+	    ids.addAll (idCol);
+	}
+	this.ids = ids;
+    }
 
     public Map<String, Object> asMap ()
     {
@@ -601,8 +620,9 @@ class Browse
 
     private void populateItem (BrowseItem item, String extras) throws Exception
     {
-        Map<String, List<String>> bibinfo = bibDB.matchingIDs (item.heading, extras);
-        item.ids = bibinfo.get ("ids");
+        Map<String, List<Collection<String>>> bibinfo = bibDB.matchingIDs (item.heading, extras);
+        //item.ids = bibinfo.get ("ids");
+	item.setIds (bibinfo.get ("ids"));
         bibinfo.remove ("ids");
         item.count = item.ids.size ();
 
