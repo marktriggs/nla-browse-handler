@@ -4,7 +4,7 @@
   (:import (org.apache.lucene.analysis.standard StandardAnalyzer)
            (org.apache.lucene.document Document Field Field$Store Field$Index)
            (org.apache.lucene.store FSDirectory)
-           (org.apache.lucene.index IndexWriter IndexWriter$MaxFieldLength)
+           (org.apache.lucene.index IndexWriter IndexWriterConfig)
            (org.apache.lucene.util Version)
            (java.io File)
            (com.google.common.io Files)
@@ -30,8 +30,9 @@
 (defn populate-index [headings field-name index-file]
   (with-open [iw (IndexWriter.
                   (FSDirectory/open (jio/file index-file))
-                  (StandardAnalyzer. Version/LUCENE_31)
-                  IndexWriter$MaxFieldLength/UNLIMITED)]
+                  (doto (IndexWriterConfig.
+                         Version/LUCENE_40
+                         (StandardAnalyzer. Version/LUCENE_40))))]
     (doseq [heading headings]
       (.addDocument iw (heading-document field-name heading)))))
 
@@ -48,6 +49,14 @@
             .getResponse
             (.get "Browse")
             (.get "items"))))
+
+
+(defn rm-rf [base]
+  (doseq [file (filter #(.isFile %)
+                       (file-seq (file base)))]
+    (.delete file))
+  (doseq [dir (clojure.core/reverse (file-seq (file base)))]
+    (.delete dir)))
 
 
 (def test-browses [{:name "author"
@@ -155,13 +164,14 @@
 
       (System/setProperty "solr.solr.home" (str tmpdir))
 
-      (.mkdir (file tmpdir "conf"))
+      (.mkdir (file tmpdir "collection1"))
+      (.mkdir (file tmpdir "collection1" "conf"))
 
       (Files/copy (file "solr/solrconfig.xml")
-                  (file tmpdir "conf" "solrconfig.xml"))
+                  (file tmpdir "collection1" "conf" "solrconfig.xml"))
 
       (Files/copy (file "solr/schema.xml")
-                  (file tmpdir "conf" "schema.xml"))
+                  (file tmpdir "collection1" "conf" "schema.xml"))
 
 
       (let [core (.initialize (new CoreContainer$Initializer))
@@ -215,8 +225,7 @@
 
 
       (finally
-       (Files/deleteRecursively tmpdir)
-       (shutdown-agents)))))
-
+        (rm-rf tmpdir)
+        (shutdown-agents)))))
 
 (main)
