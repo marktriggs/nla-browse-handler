@@ -1,3 +1,13 @@
+;;;
+;;; tests.clj -- Test the sort order for the browse handler.
+;;;
+;;; These tests were created to check that the browse handler was sorting
+;;; headings as expected.  If you change anything relating to sorting, it's a
+;;; good idea to run these tests (using the 'run.sh' script in this directory).
+;;;
+;;; More general tests for the browse functionality are better added to VuFind's
+;;; integration test suite.
+
 (ns tests
   (:use [clojure.java.io :as jio]
         [clojure.test :as test])
