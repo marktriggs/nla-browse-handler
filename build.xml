@@ -98,6 +98,7 @@
       <classpath>
         <pathelement location="tests/lib/*"/>
         <pathelement location="${builddir}/tests"/>
+        <pathelement path="${toString:classpath}"/>
       </classpath>
       <formatter type="plain" usefile="false"/>
       <batchtest>
