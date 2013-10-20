@@ -153,3 +153,10 @@
 
    mv mybrowse.db mybrowse.db.old;  mv mybrowse.db.new mybrowse.db
    my authority.index authority.index.old; mv authority.index.new authority.index
+
+
+5.  Development
+
+Running the unit tests:
+
+     ant test -Dsolr.war=/path/to/my/webapps/solr.war

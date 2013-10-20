@@ -90,9 +90,21 @@
   </target>
 
   <target name="test" depends="build">
-    <exec executable="sh">
-      <arg value="-c" />
-      <arg value="java -Dfile.encoding=UTF-8 -cp 'build/deps/WEB-INF/lib/*:build/common:build/browse-indexing:build/browse-handler:libs/*:' clojure.main tests/tests.clj 2>/dev/null" />
-    </exec>
+    <mkdir dir="${builddir}/tests"/>
+    <javac fork="true" debug="on" srcdir="tests/" destdir="${builddir}/tests"
+           classpath="tests/lib/*:${toString:classpath}" />
+
+    <junit showoutput="yes" fork="true">
+      <classpath>
+        <pathelement location="tests/lib/*"/>
+        <pathelement location="${builddir}/tests"/>
+      </classpath>
+      <formatter type="plain" usefile="false"/>
+      <batchtest>
+        <fileset dir="tests">
+	  <include name="**/*.java"/>
+        </fileset>
+      </batchtest>
+    </junit>
   </target>
 </project>
