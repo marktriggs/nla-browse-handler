@@ -1,5 +1,6 @@
 package org.vufind.solr.browse.tests;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
@@ -54,6 +55,11 @@ public class NormaliserTest
     }
 
 
+    @Test
+    public void ignoresPunctuationMixedWithSpaces () {
+        assertArrayEquals (normaliser.normalise ("wharton, edith"), normaliser.normalise ("wharton edith"));
+        assertArrayEquals (normaliser.normalise ("st. john"), normaliser.normalise ("st john"));
+    }
 
 
     //
