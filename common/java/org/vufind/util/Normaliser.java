@@ -47,10 +47,10 @@ public class Normaliser
 
     public byte[] normalise (String s)
     {
-        s = s.replaceAll (" +", " ")
-            .replaceAll("-", "")
-            .replaceAll("\\p{Punct}", " ")
-            .trim();
+        s = s.replaceAll ("-", "")
+            .replaceAll ("\\p{Punct}", " ")
+            .replaceAll (" +", " ")
+            .trim ();
 
         s = junkregexp.matcher (s) .replaceAll ("");
 
