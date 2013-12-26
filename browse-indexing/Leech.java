@@ -4,8 +4,9 @@ import org.apache.lucene.search.*;
 import java.io.*;
 import java.util.*;
 
-import org.vufind.util.ICUCollatorNormalizer;
 import org.vufind.util.BrowseEntry;
+import org.vufind.util.Normalizer;
+import org.vufind.util.NormalizerFactory;
 
 
 public class Leech
@@ -14,7 +15,7 @@ public class Leech
     protected IndexSearcher searcher;
 
     private String field;
-    private ICUCollatorNormalizer iCUCollatorNormalizer;
+    private Normalizer normalizer;
 
     TermsEnum tenum = null;
 
@@ -26,13 +27,14 @@ public class Leech
         searcher = new IndexSearcher (reader);
         this.field = field;
 
-        iCUCollatorNormalizer = ICUCollatorNormalizer.getInstance ();
+        String normalizerClass = "org.vufind.util.ICUCollatorNormalizer";
+        normalizer = NormalizerFactory.getNormalizer(normalizerClass);
     }
 
 
     public byte[] buildSortKey (String heading)
     {
-        return iCUCollatorNormalizer.normalize (heading);
+        return normalizer.normalize (heading);
     }
 
 
