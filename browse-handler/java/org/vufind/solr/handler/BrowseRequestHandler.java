@@ -23,7 +23,7 @@ import org.apache.lucene.document.*;
 import java.util.logging.Logger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.vufind.util.Normaliser;
+import org.vufind.util.ICUCollatorNormalizer;
 import org.vufind.util.BrowseEntry;
 
 class Log
@@ -55,14 +55,14 @@ class HeadingsDB
     String path;
     long dbVersion;
     int totalCount;
-    Normaliser normaliser;
+    ICUCollatorNormalizer iCUCollatorNormalizer;
 
     ReentrantReadWriteLock dbLock = new ReentrantReadWriteLock ();
 
     public HeadingsDB (String path) throws Exception
     {
         this.path = path;
-        normaliser = Normaliser.getInstance ();
+        iCUCollatorNormalizer = ICUCollatorNormalizer.getInstance ();
     }
 
 
@@ -147,7 +147,7 @@ class HeadingsDB
             "order by key " +
             "limit 1");
 
-        rowStmnt.setBytes (1, normaliser.normalise (from));
+        rowStmnt.setBytes (1, iCUCollatorNormalizer.normalize (from));
 
         ResultSet rs = rowStmnt.executeQuery ();
 
