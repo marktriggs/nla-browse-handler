@@ -32,7 +32,7 @@ public class ICUCollatorNormalizer implements Normalizer
         collator.setStrength(Collator.SECONDARY);
     }
 
-
+    // TODO: remove getInstance when no longer needed
     public static ICUCollatorNormalizer getInstance () throws Exception
     {
         ICUCollatorNormalizer iCUCollatorNormalizer;

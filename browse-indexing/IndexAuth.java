@@ -70,11 +70,11 @@ class IndexAuth
                 if (field != null) {
                     StringBuffer sb = new StringBuffer ();
 
-                    List subfields = f.getSubfields ();
-                    Iterator i = subfields.iterator ();
+                    List<Subfield> subfields = f.getSubfields ();
+                    Iterator<Subfield> i = subfields.iterator ();
 
                     while (i.hasNext ()) {
-                        Subfield subfield = (Subfield) i.next ();
+                        Subfield subfield = i.next ();
 
                         if (subfield.getCode () == 'w') {
                             continue;

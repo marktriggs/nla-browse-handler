@@ -27,8 +27,13 @@ public class Leech
         searcher = new IndexSearcher (reader);
         this.field = field;
 
-        String normalizerClass = "org.vufind.util.ICUCollatorNormalizer";
-        normalizer = NormalizerFactory.getNormalizer(normalizerClass);
+        
+        String normalizerClass = System.getProperty("browse.normalizer");
+        if (normalizerClass == null) {
+            normalizer = NormalizerFactory.getNormalizer();        	
+        } else {
+            normalizer = NormalizerFactory.getNormalizer(normalizerClass);
+        }
     }
 
 
