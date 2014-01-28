@@ -13,15 +13,15 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import org.vufind.util.Normaliser;
+import org.vufind.util.ICUCollatorNormalizer;
 
-public class NormaliserTest
+public class ICUCollatorNormalizerTest
 {
-    private Normaliser normaliser;
+    private ICUCollatorNormalizer iCUCollatorNormalizer;
 
     @Before
     public void setUp () {
-        normaliser = new Normaliser ();
+        iCUCollatorNormalizer = new ICUCollatorNormalizer ();
     }
 
 
@@ -35,8 +35,7 @@ public class NormaliserTest
     @Test
     public void sortsDiacriticStrings () {
         assertEquals (listOf ("AAA", "Äardvark", "Apple", "Banana", "grapefruit", "Orange"),
-                      sort (listOf ("grapefruit", "Apple", "Orange", "AAA", "Äardvark", "Banana")));
-
+                sort (listOf ("grapefruit", "Apple", "Orange", "AAA", "Äardvark", "Banana")));
     }
 
 
@@ -57,8 +56,8 @@ public class NormaliserTest
 
     @Test
     public void ignoresPunctuationMixedWithSpaces () {
-        assertArrayEquals (normaliser.normalise ("wharton, edith"), normaliser.normalise ("wharton edith"));
-        assertArrayEquals (normaliser.normalise ("st. john"), normaliser.normalise ("st john"));
+        assertArrayEquals (iCUCollatorNormalizer.normalize ("wharton, edith"), iCUCollatorNormalizer.normalize ("wharton edith"));
+        assertArrayEquals (iCUCollatorNormalizer.normalize ("st. john"), iCUCollatorNormalizer.normalize ("st john"));
     }
 
 
@@ -95,8 +94,8 @@ public class NormaliserTest
 
         Collections.sort (result, new Comparator<String> () {
                 public int compare (String s1, String s2) {
-                    return compareByteArrays (normaliser.normalise (s1),
-                                              normaliser.normalise (s2));
+                    return compareByteArrays (iCUCollatorNormalizer.normalize (s1),
+                                              iCUCollatorNormalizer.normalize (s2));
                 }
             });
 

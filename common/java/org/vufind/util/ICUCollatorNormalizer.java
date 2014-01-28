@@ -1,9 +1,5 @@
 package org.vufind.util;
 
-//
-// Author: Mark Triggs <mark@dishevelled.net>
-//
-
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
@@ -11,7 +7,17 @@ import org.vufind.util.*;
 
 import com.ibm.icu.text.Collator;
 
-public class Normaliser
+/**
+ * Normalizer class which uses the ICU <code>Collator<code> class to produce collation byte arrays.
+ * The use of <code>Collator<code> takes into account diacritics and other Unicode features. 
+ * This normalizer should be suitable for most text fields. 
+ * 
+ * @author Mark Triggs <mark@dishevelled.net>
+ * @author Tod Olson <tod@uchicago.edu>
+ *
+ */
+
+public class ICUCollatorNormalizer implements Normalizer
 {
     protected Collator collator;
 
@@ -19,33 +25,33 @@ public class Normaliser
         Pattern.compile ("\\([^a-z0-9\\p{L} ]\\)");
 
 
-    public Normaliser()
+    public ICUCollatorNormalizer()
     {
         collator = Collator.getInstance();
         // Ignore case for the purposes of comparisons.
         collator.setStrength(Collator.SECONDARY);
     }
 
-
-    public static Normaliser getInstance () throws Exception
+    // TODO: remove getInstance when no longer needed
+    public static ICUCollatorNormalizer getInstance () throws Exception
     {
-        Normaliser normaliser;
+        ICUCollatorNormalizer iCUCollatorNormalizer;
 
         if (Utils.getEnvironment ("NORMALISER") != null) {
             String normaliserClass = Utils.getEnvironment ("NORMALISER");
 
-            normaliser = (Normaliser) (Class.forName (normaliserClass)
+            iCUCollatorNormalizer = (ICUCollatorNormalizer) (Class.forName (normaliserClass)
                         .getConstructor ()
                         .newInstance ());
         } else {
-            normaliser = new Normaliser ();
+            iCUCollatorNormalizer = new ICUCollatorNormalizer ();
         }
 
-        return normaliser;
+        return iCUCollatorNormalizer;
     }
 
 
-    public byte[] normalise (String s)
+    public byte[] normalize (String s)
     {
         s = s.replaceAll ("-", "")
             .replaceAll ("\\p{Punct}", " ")

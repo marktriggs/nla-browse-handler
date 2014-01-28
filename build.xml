@@ -96,6 +96,7 @@
 
     <junit showoutput="yes" fork="true">
       <classpath>
+        <pathelement location="tests/lib/junit-4.11.jar"/>
         <pathelement location="tests/lib/*"/>
         <pathelement location="${builddir}/tests"/>
         <pathelement path="${toString:classpath}"/>

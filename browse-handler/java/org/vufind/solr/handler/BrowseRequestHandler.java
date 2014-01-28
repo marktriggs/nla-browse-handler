@@ -23,7 +23,8 @@ import org.apache.lucene.document.*;
 import java.util.logging.Logger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.vufind.util.Normaliser;
+import org.vufind.util.Normalizer;
+import org.vufind.util.NormalizerFactory;
 import org.vufind.util.BrowseEntry;
 
 class Log
@@ -55,14 +56,26 @@ class HeadingsDB
     String path;
     long dbVersion;
     int totalCount;
-    Normaliser normaliser;
+    Normalizer normalizer;
 
     ReentrantReadWriteLock dbLock = new ReentrantReadWriteLock ();
 
     public HeadingsDB (String path) throws Exception
     {
         this.path = path;
-        normaliser = Normaliser.getInstance ();
+        normalizer = NormalizerFactory.getNormalizer ();
+    }
+
+    public HeadingsDB (String path, String normalizerClassName) throws Exception
+    {
+        Log.info("constructor: HeadingsDB (" + path + ", " + normalizerClassName + ")");
+
+        this.path = path;
+        if (normalizerClassName == null) {
+        	normalizer = NormalizerFactory.getNormalizer ();
+        } else {
+            normalizer = NormalizerFactory.getNormalizer (normalizerClassName);
+        }
     }
 
 
@@ -147,7 +160,7 @@ class HeadingsDB
             "order by key " +
             "limit 1");
 
-        rowStmnt.setBytes (1, normaliser.normalise (from));
+        rowStmnt.setBytes (1, normalizer.normalize (from));
 
         ResultSet rs = rowStmnt.executeQuery ();
 
@@ -683,17 +696,20 @@ class BrowseSource
     public String DBpath;
     public String field;
     public String dropChars;
+    public String normalizer;
 
     public Browse browse;
 
 
     public BrowseSource (String DBpath,
                          String field,
-                         String dropChars)
+                         String dropChars,
+                         String normalizer)
     {
         this.DBpath = DBpath;
         this.field = field;
         this.dropChars = dropChars;
+        this.normalizer = normalizer;
     }
 }
 
@@ -741,7 +757,8 @@ public class BrowseRequestHandler extends RequestHandlerBase
             sources.put (source,
                          new BrowseSource (entry.get ("DBpath"),
                                            entry.get ("field"),
-                                           entry.get ("dropChars")));
+                                           entry.get ("dropChars"),
+                                           entry.get ("normalizer")));
         }
     }
 
@@ -802,13 +819,14 @@ public class BrowseRequestHandler extends RequestHandlerBase
         synchronized (this) {
             if (source.browse == null) {
                 source.browse = (new Browse
-                                 (new HeadingsDB (source.DBpath),
+                                 (new HeadingsDB (source.DBpath, source.normalizer),
                                   new AuthDB
                                   (authPath,
                                    solrParams.get ("preferredHeadingField"),
                                    solrParams.get ("useInsteadHeadingField"),
                                    solrParams.get ("seeAlsoHeadingField"),
                                    solrParams.get ("scopeNoteField"))));
+                Log.info("new browse source with HeadingsDB (" + source.DBpath + ", " + source.normalizer + ")");
             }
 
             source.browse.setBibDB (new BibDB (req.getSearcher (),
