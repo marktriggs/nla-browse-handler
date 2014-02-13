@@ -37,6 +37,7 @@ public class StoredFieldLeech extends Leech
         fieldSelection = new HashSet<String>();
         fieldSelection.add(sortField);
         fieldSelection.add(valueField);
+        fieldSelection.add("id");   // make Solr id available for error messages
 
         reader = DirectoryReader.open (FSDirectory.open (new File (indexPath)));
         buffer = new LinkedList<BrowseEntry> ();
@@ -57,14 +58,24 @@ public class StoredFieldLeech extends Leech
                                             value[i]));
             }
         } else {
-            System.err.println("Skipped entries for docid " + docid +
-                               " because the number of sort keys didn't" +
+            String id = null;
+            IndexableField idField = doc.getField("id");
+            if (idField != null) {
+                /*
+                 * Assumes id is defined as type string in Solr schema.
+                 * Should be safe for VuFind.
+                 */
+                id = idField.stringValue();
+            }
+            System.err.println("Skipped entries for doc #" + docid +
+                               " (id:" + id + "):" +
+                               " the number of sort keys didn't" +
                                " match the number of stored values.");
         }
     }
 
 
-    public BrowseEntry next () throws Exception
+    public BrowseEntry next() throws Exception
     {
         while (buffer.isEmpty ()) {
             if (currentDoc < reader.maxDoc ()) {
