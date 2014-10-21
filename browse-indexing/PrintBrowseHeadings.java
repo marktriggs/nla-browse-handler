@@ -5,6 +5,7 @@
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
+import java.nio.charset.*;
 
 import org.apache.lucene.store.*;
 import org.apache.lucene.search.*;
@@ -49,9 +50,12 @@ public class PrintBrowseHeadings
             }
 
             if (sort_key != null) {
+                // Output a delimited key/value pair, base64-encoding both strings
+                // to ensure that no characters overlap with the delimiter or introduce
+                // \n's that could interfere with line-based sorting of the file.
                 out.print (new String (Base64.encodeBase64 (sort_key)) +
                            KEY_SEPARATOR +
-                           heading +
+                           new String (Base64.encodeBase64 (heading.getBytes(Charset.forName("UTF-8")))) +
                            RECORD_SEPARATOR);
             }
         }
