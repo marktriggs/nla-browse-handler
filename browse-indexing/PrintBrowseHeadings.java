@@ -34,6 +34,13 @@ public class PrintBrowseHeadings
     private String KEY_SEPARATOR = "\1";
     private String RECORD_SEPARATOR = "\r\n";
 
+    /**
+     * Load headings from the index into a file.
+     *
+     * @param leech     Leech for pulling in headings
+     * @param out       Output target
+     * @param predicate Optional Predicate for filtering headings
+     */
     private void loadHeadings (Leech leech,
                                PrintWriter out,
                                Predicate predicate)
@@ -41,6 +48,10 @@ public class PrintBrowseHeadings
     {
         BrowseEntry h;
         while ((h = leech.next ()) != null) {
+            // We use a byte array for the sort key instead of a string to ensure
+            // consistent sorting even if the index tool and browse handler are running
+            // with different locale settings. Using strings results in less predictable
+            // behavior.
             byte[] sort_key = h.key;
             String heading = h.value;
 
