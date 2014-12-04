@@ -6,12 +6,26 @@
 package org.vufind.solr.handler;
 
 
-import org.apache.lucene.index.*;
-import org.apache.lucene.store.*;
+
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.search.Collector;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Scorer;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.TotalHitCountCollector;
 import org.apache.solr.handler.*;
 import org.apache.solr.request.*;
+import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.util.RefCounted;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
+import org.apache.solr.core.CoreContainer;
+import org.apache.solr.core.CoreDescriptor;
+import org.apache.solr.core.SolrCore;
+
 import java.io.*;
 import java.util.*;
 import java.net.URL;
@@ -20,6 +34,7 @@ import java.sql.*;
 import org.vufind.util.*;
 import org.apache.lucene.search.*;
 import org.apache.lucene.document.*;
+
 import java.util.logging.Logger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -72,7 +87,7 @@ class HeadingsDB
 
         this.path = path;
         if (normalizerClassName == null) {
-        	normalizer = NormalizerFactory.getNormalizer ();
+            normalizer = NormalizerFactory.getNormalizer ();
         } else {
             normalizer = NormalizerFactory.getNormalizer (normalizerClassName);
         }
@@ -219,89 +234,6 @@ class HeadingsDB
 
 
 
-class LuceneDB
-{
-    static Map<String,LuceneDB> dbs = new HashMap<String,LuceneDB> ();
-
-    IndexSearcher searcher;
-    String dbpath;
-    long currentVersion = -1;
-
-
-    public synchronized static LuceneDB getOrCreate (String path)
-        throws Exception
-    {
-        if (!dbs.containsKey (path)) {
-            LuceneDB db = new LuceneDB (path);
-            dbs.put (path, db);
-        }
-
-        return dbs.get (path);
-    }
-
-
-    public synchronized static void reopenAllIfUpdated ()
-        throws Exception
-    {
-        for (LuceneDB db : dbs.values ()) {
-            db.reopenIfUpdated ();
-        }
-    }
-
-
-    public LuceneDB (String path) throws Exception
-    {
-        this.dbpath = path;
-    }
-
-
-    private void openSearcher () throws Exception
-    {
-        if (searcher != null) {
-            searcher.getIndexReader().close ();
-        }
-
-        IndexReader dbReader = DirectoryReader.open(FSDirectory.open (new File (dbpath)));
-        searcher = new IndexSearcher (dbReader);
-        currentVersion = indexVersion ();
-    }
-
-
-    public TopDocs search (Query q, int n) throws Exception
-    {
-        return searcher.search (q, n);
-    }
-
-
-    private long indexVersion ()
-    {
-        return new File (dbpath + "/segments.gen").lastModified ();
-    }
-
-
-    private boolean isDBUpdated ()
-    {
-        return (currentVersion != indexVersion ());
-    }
-
-
-    public Document getDocument (int docid) throws Exception
-    {
-        return searcher.getIndexReader ().document (docid);
-    }
-
-
-    public synchronized void reopenIfUpdated () throws Exception
-    {
-        if (isDBUpdated ()) {
-            openSearcher ();
-            Log.info ("Reopened " + searcher + " (" + dbpath + ")");
-        }
-    }
-}
-
-
-
 /*
  *
  * Interface to the Solr Authority DB
@@ -311,20 +243,20 @@ class AuthDB
 {
     static int MAX_PREFERRED_HEADINGS = 1000;
 
-    private LuceneDB db;
+    private SolrIndexSearcher searcher;
     private String preferredHeadingField;
     private String useInsteadHeadingField;
     private String seeAlsoHeadingField;
     private String scopeNoteField;
 
-    public AuthDB (String path,
+    public AuthDB (SolrIndexSearcher authSearcher,
                    String preferredField,
                    String useInsteadField,
                    String seeAlsoField,
                    String noteField)
         throws Exception
     {
-        db = LuceneDB.getOrCreate (path);
+        searcher = authSearcher;
         preferredHeadingField = preferredField;
         useInsteadHeadingField = useInsteadField;
         seeAlsoHeadingField = seeAlsoField;
@@ -344,21 +276,15 @@ class AuthDB
     }
 
 
-    public void reopenIfUpdated () throws Exception
-    {
-        db.reopenIfUpdated ();
-    }
-
-
     public Document getAuthorityRecord (String heading)
         throws Exception
     {
-        TopDocs results = (db.search (new TermQuery (new Term (preferredHeadingField,
+        TopDocs results = (searcher.search (new TermQuery (new Term (preferredHeadingField,
                                                                heading)),
                                       1));
 
         if (results.totalHits > 0) {
-            return db.getDocument (results.scoreDocs[0].doc);
+            return searcher.getIndexReader ().document (results.scoreDocs[0].doc);
         } else {
             return null;
         }
@@ -368,14 +294,14 @@ class AuthDB
     public List<Document> getPreferredHeadings (String heading)
         throws Exception
     {
-        TopDocs results = (db.search (new TermQuery (new Term (useInsteadHeadingField,
+        TopDocs results = (searcher.search (new TermQuery (new Term (useInsteadHeadingField,
                                                                heading)),
                                       MAX_PREFERRED_HEADINGS));
 
         List<Document> result = new Vector<Document> ();
 
         for (int i = 0; i < results.totalHits; i++) {
-            result.add (db.getDocument (results.scoreDocs[i].doc));
+            result.add (searcher.getIndexReader ().document (results.scoreDocs[i].doc));
         }
 
         return result;
@@ -621,7 +547,6 @@ class Browse
     public synchronized void reopenDatabasesIfUpdated () throws Exception
     {
         headingsDB.reopenIfUpdated ();
-        authDB.reopenIfUpdated ();
     }
 
 
@@ -715,37 +640,39 @@ class BrowseSource
 
 
 
+/**
+ * Handles the browse request: looks up the heading, consults the biblio core number of hits 
+ * and the authority core for cross refernces.
+ * 
+ * By default the name of the authority core is <code>authority</code>. This can be overridden
+ * by setting the parameter <core>authCoreName</core> in the handler configuration in 
+ * <code>solrconfig.xml</code>.
+ * 
+ * @author Mark Triggs
+ * @author Tod Olson
+ *
+ */
 public class BrowseRequestHandler extends RequestHandlerBase
 {
-    private String authPath = null;
-    private String bibPath = null;
+    public static final String DFLT_AUTH_CORE_NAME = "authority";
+    protected String authCoreName = null;
 
     private Map<String,BrowseSource> sources = new HashMap<String,BrowseSource> ();
-
     private SolrParams solrParams;
 
 
-    private String asAbsFile (String s)
-    {
-        File f = new File (s);
-
-        if (!f.isAbsolute ()) {
-            return (new File (new File (System.getenv ("BROWSE_HOME")),
-                             f.getPath ()).getPath ());
-        } else {
-            return f.getPath ();
-        }
-    }
-
-
+    /*
+     *  RequestHandlerBase implements SolrRequestHandler. As of Solr 4.2.1,
+     *  {@link SolrRequestHandler#init(NamedList args)} is not defined with a type.
+     *  So there's a warning.
+     */
     public void init (NamedList args)
     {
         super.init (args);
 
         solrParams = SolrParams.toSolrParams (args);
 
-        authPath = asAbsFile (solrParams.get ("authIndexPath"));
-        bibPath = asAbsFile (solrParams.get ("bibIndexPath"));
+        authCoreName = solrParams.get("authCoreName", DFLT_AUTH_CORE_NAME);
 
         sources = new HashMap<String, BrowseSource> ();
 
@@ -781,12 +708,6 @@ public class BrowseRequestHandler extends RequestHandlerBase
     {
         SolrParams p = req.getParams ();
 
-        if (p.get ("reopen") != null) {
-            LuceneDB.reopenAllIfUpdated ();
-            return;
-        }
-
-
         String sourceName = p.get ("source");
         String from = p.get ("from");
         String extras = p.get ("extras");
@@ -816,45 +737,59 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
         BrowseSource source = sources.get (sourceName);
 
-        synchronized (this) {
-            if (source.browse == null) {
-                source.browse = (new Browse
-                                 (new HeadingsDB (source.DBpath, source.normalizer),
-                                  new AuthDB
-                                  (authPath,
-                                   solrParams.get ("preferredHeadingField"),
-                                   solrParams.get ("useInsteadHeadingField"),
-                                   solrParams.get ("seeAlsoHeadingField"),
-                                   solrParams.get ("scopeNoteField"))));
-                Log.info("new browse source with HeadingsDB (" + source.DBpath + ", " + source.normalizer + ")");
-            }
-
-            source.browse.setBibDB (new BibDB (req.getSearcher (),
-                                               source.field));
-        }
+        SolrCore core = req.getCore();
+        CoreDescriptor cd = core.getCoreDescriptor();
+        CoreContainer cc = cd.getCoreContainer();
+        SolrCore authCore = cc.getCore(authCoreName);
+        //Must decrement RefCounted when finished!
+        RefCounted<SolrIndexSearcher> authSearcherRef = authCore.getSearcher();
 
         try {
-            source.browse.reopenDatabasesIfUpdated ();
+            SolrIndexSearcher authSearcher = authSearcherRef.get();
 
-            if (from != null) {
-                rowid = (source.browse.getId (from));
+            synchronized (this) {
+                if (source.browse == null) {
+                    source.browse = (new Browse
+                            (new HeadingsDB (source.DBpath, source.normalizer),
+                                    new AuthDB
+                                    (authSearcher,
+                                            solrParams.get ("preferredHeadingField"),
+                                            solrParams.get ("useInsteadHeadingField"),
+                                            solrParams.get ("seeAlsoHeadingField"),
+                                            solrParams.get ("scopeNoteField"))));
+                    Log.info("new browse source with HeadingsDB (" + source.DBpath + ", " + source.normalizer + ")");
+                }
+
+                source.browse.setBibDB (new BibDB (req.getSearcher (),
+                        source.field));
             }
 
+            try {
+                source.browse.reopenDatabasesIfUpdated ();
 
-            Log.info ("Browsing from: " + rowid);
+                if (from != null) {
+                    rowid = (source.browse.getId (from));
+                }
 
-            BrowseList list = source.browse.getList (rowid, offset, rows, extras);
 
-            Map<String,Object> result = new HashMap<String, Object> ();
+                Log.info ("Browsing from: " + rowid);
 
-            result.put ("totalCount", list.totalCount);
-            result.put ("items", list.asMap ());
-            result.put ("startRow", rowid);
-            result.put ("offset", offset);
+                BrowseList list = source.browse.getList (rowid, offset, rows, extras);
 
-            rsp.add ("Browse", result);
+                Map<String,Object> result = new HashMap<String, Object> ();
+
+                result.put ("totalCount", list.totalCount);
+                result.put ("items", list.asMap ());
+                result.put ("startRow", rowid);
+                result.put ("offset", offset);
+
+                rsp.add ("Browse", result);
+            } finally {
+                source.browse.queryFinished ();
+            }
         } finally {
-            source.browse.queryFinished ();
+            //Must decrement RefCounted when finished!
+            authSearcherRef.decref();
         }
     }
 
