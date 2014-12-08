@@ -102,9 +102,6 @@
   Then configure your browse types in solrconfig.xml:
 
     <requestHandler name="/browse" class="org.vufind.solr.handler.BrowseRequestHandler">
-       <str name="authIndexPath">/path/to/your/authority.index</str>
-       <str name="bibIndexPath">/path/to/your/bib/data/index</str>
-
        <str name="sources">names,subjects</str>
 
        <!-- These definitions should match the field names used in the authority index. -->
@@ -114,13 +111,13 @@
        <str name="scopeNoteField">scopeNote</str>
 
        <lst name="names">
-	 <str name="DBpath">/path/to/your/namesbrowse.db</str>
-	 <str name="field">author-browse</str>
+         <str name="DBpath">/path/to/your/namesbrowse.db</str>
+         <str name="field">author-browse</str>
        </lst>
 
        <lst name="subjects">
-	 <str name="DBpath">/path/to/your/subjectsbrowse.db</str>
-	 <str name="field">subject-browse</str>
+         <str name="DBpath">/path/to/your/subjectsbrowse.db</str>
+         <str name="field">subject-browse</str>
          <str name="dropChars">[]()',</str>
        </lst>
     </requestHandler>
