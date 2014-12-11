@@ -59,7 +59,8 @@ class Log
 
 class HeadingSlice
 {
-    public List<String> headings = new LinkedList<String> ();
+    public List<String> sort_keys = new ArrayList<String> ();
+    public List<String> headings = new ArrayList<String> ();
     public int total;
 }
 
@@ -86,11 +87,7 @@ class HeadingsDB
         Log.info("constructor: HeadingsDB (" + path + ", " + normalizerClassName + ")");
 
         this.path = path;
-        if (normalizerClassName == null) {
-            normalizer = NormalizerFactory.getNormalizer ();
-        } else {
-            normalizer = NormalizerFactory.getNormalizer (normalizerClassName);
-        }
+        normalizer = NormalizerFactory.getNormalizer (normalizerClassName);
     }
 
 
@@ -220,6 +217,7 @@ class HeadingsDB
         }
 
         while (rs.next ()) {
+            result.sort_keys.add (rs.getString ("key_text"));
             result.headings.add (rs.getString ("heading"));
         }
 
@@ -484,14 +482,16 @@ class BrowseItem
     public List<String> seeAlso = new LinkedList<String> ();
     public List<String> useInstead = new LinkedList<String> ();
     public String note = "";
+    public String sort_key;
     public String heading;
     public List<String> ids;
     public Map<String, List<Collection<String>>> extras = new HashMap<String, List<Collection<String>>> ();
     int count;
 
 
-    public BrowseItem (String heading)
+    public BrowseItem (String sort_key, String heading)
     {
+        this.sort_key = sort_key;
         this.heading = heading;
     }
 
@@ -509,6 +509,7 @@ class BrowseItem
     {
         Map<String, Object> result = new HashMap<String, Object> ();
 
+        result.put ("sort_key", sort_key);
         result.put ("heading", heading);
         result.put ("seeAlso", seeAlso);
         result.put ("useInstead", useInstead);
@@ -602,8 +603,11 @@ class Browse
 
         result.totalCount = h.total;
 
-        for (String heading : h.headings) {
-            BrowseItem item = new BrowseItem (heading);
+        for (int i = 0; i < h.headings.size (); i++) {
+            String heading = h.headings.get (i);
+            String sort_key = h.sort_keys.get (i);
+
+            BrowseItem item = new BrowseItem (sort_key, heading);
 
             populateItem (item, extras);
 
@@ -638,6 +642,69 @@ class BrowseSource
     }
 }
 
+
+class MatchTypeResponse
+{
+    private String from;
+    private BrowseList results;
+    int rows, offset;
+    Normalizer normalizer;
+
+    public MatchTypeResponse (String from, BrowseList results, int rows, int offset, Normalizer normalizer) {
+        this.from = from;
+        this.results = results;
+        this.rows = rows;
+        this.offset = offset;
+        this.normalizer = normalizer;
+    }
+
+
+    public enum MatchType {
+        EXACT,
+        HEAD_OF_STRING,
+        NONE
+    };
+
+
+    private MatchType calculateMatchType (String heading, String query) {
+        byte[] normalizedQuery = normalizer.normalize (query);
+        byte[] normalizedHeading = normalizer.normalize (heading);
+
+        if (Arrays.equals (normalizedQuery, normalizedHeading)) {
+            return MatchType.EXACT;
+        }
+
+        for (int i = 0; i < heading.length (); i++) {
+            byte[] normalizedHeadingPrefix = normalizer.normalize (heading.substring (0, i));
+            if (Arrays.equals (normalizedQuery, normalizedHeadingPrefix)) {
+                return MatchType.HEAD_OF_STRING;
+            }
+        }
+
+        return MatchType.NONE;
+    }
+
+
+    public boolean addTo (Map<String,Object> solrResponse) {
+        if (from == null || "".equals (from)) {
+            return false;
+        }
+
+        if (rows - Math.abs (offset) <= 0) {
+            // The matching browse item isn't visible in the list
+            return false;
+        }
+
+        int matched_item_index = Math.abs (offset);
+
+        BrowseItem matched_item = results.items.get (matched_item_index);
+        String matched_heading = matched_item.sort_key;
+
+        solrResponse.put ("matchType", calculateMatchType (matched_heading, from).toString ());
+
+        return true;
+    }
+}
 
 
 /**
@@ -782,6 +849,8 @@ public class BrowseRequestHandler extends RequestHandlerBase
                 result.put ("items", list.asMap ());
                 result.put ("startRow", rowid);
                 result.put ("offset", offset);
+
+                new MatchTypeResponse (from, list, rows, offset, NormalizerFactory.getNormalizer (source.normalizer)).addTo (result);
 
                 rsp.add ("Browse", result);
             } finally {

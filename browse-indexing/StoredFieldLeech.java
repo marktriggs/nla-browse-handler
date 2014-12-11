@@ -55,6 +55,7 @@ public class StoredFieldLeech extends Leech
         if (sort_key.length == value.length) {
             for (int i = 0; i < value.length; i++) {
                 buffer.add (new BrowseEntry(buildSortKey(sort_key[i]),
+                                            sort_key[i],
                                             value[i]));
             }
         } else {

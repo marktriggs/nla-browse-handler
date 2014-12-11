@@ -62,18 +62,18 @@ public class CreateBrowseSQLite
         outputDB.setAutoCommit (false);
 
         PreparedStatement prep = outputDB.prepareStatement (
-            "insert or ignore into all_headings (key, heading) values (?, ?)");
+            "insert or ignore into all_headings (key, key_text, heading) values (?, ?, ?)");
 
         String line;
         while ((line = readCRLFLine (br)) != null) {
-            int sep = line.indexOf (KEY_SEPARATOR.charAt (0));
-            if (sep >= 0) {
+            String[] fields = line.split (KEY_SEPARATOR);
 
+            if (fields.length == 3) {
                 // If we found the separator character, we have a key/value pair of
                 // Base64-encoded strings to decode and push into the batch:
-                byte[] key = Base64.decodeBase64 (line.substring (0, sep).getBytes());
-                prep.setBytes (1, key);
-                prep.setBytes (2, Base64.decodeBase64 (line.substring (sep + 1)));
+                prep.setBytes (1, Base64.decodeBase64 (fields[0].getBytes ()));
+                prep.setBytes (2, Base64.decodeBase64 (fields[1].getBytes ()));
+                prep.setBytes (3, Base64.decodeBase64 (fields[2].getBytes ()));
 
                 prep.addBatch ();
             }
@@ -100,7 +100,7 @@ public class CreateBrowseSQLite
         Statement stat = outputDB.createStatement ();
 
         stat.executeUpdate ("drop table if exists all_headings;");
-        stat.executeUpdate ("create table all_headings (key, heading);");
+        stat.executeUpdate ("create table all_headings (key, key_text, heading);");
         stat.executeUpdate ("PRAGMA synchronous = OFF;");
         stat.execute ("PRAGMA journal_mode = OFF;");
 

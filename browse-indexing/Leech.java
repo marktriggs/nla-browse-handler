@@ -29,11 +29,7 @@ public class Leech
 
 
         String normalizerClass = System.getProperty("browse.normalizer");
-        if (normalizerClass == null) {
-            normalizer = NormalizerFactory.getNormalizer();
-        } else {
-            normalizer = NormalizerFactory.getNormalizer(normalizerClass);
-        }
+        normalizer = NormalizerFactory.getNormalizer(normalizerClass);
     }
 
 
@@ -79,7 +75,7 @@ public class Leech
             String termText = tenum.term().utf8ToString();
 
             if (termExists(termText)) {
-                return new BrowseEntry (buildSortKey (termText), termText) ;
+                return new BrowseEntry (buildSortKey (termText), termText, termText) ;
             } else {
                 return this.next();
             }
