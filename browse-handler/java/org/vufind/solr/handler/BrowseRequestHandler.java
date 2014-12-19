@@ -460,12 +460,12 @@ class BibDB
 class BrowseList
 {
     public int totalCount;
-    public List<BrowseItem> items = new LinkedList<BrowseItem> ();
+    public List<BrowseItem> items = new ArrayList<BrowseItem> ();
 
 
     public List<Map<String, Object>> asMap ()
     {
-        List<Map<String, Object>> result = new LinkedList<Map<String, Object>> ();
+        List<Map<String, Object>> result = new ArrayList<Map<String, Object>> ();
 
         for (BrowseItem item : items) {
             result.add (item.asMap ());
@@ -695,7 +695,8 @@ class MatchTypeResponse
             return false;
         }
 
-        int matched_item_index = Math.abs (offset);
+        int matched_item_index = Math.min(Math.abs (offset),
+                                          results.items.size () - 1);
 
         BrowseItem matched_item = results.items.get (matched_item_index);
         String matched_heading = matched_item.sort_key;
