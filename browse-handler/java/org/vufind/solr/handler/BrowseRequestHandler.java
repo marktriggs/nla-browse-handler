@@ -695,8 +695,14 @@ class MatchTypeResponse
             return false;
         }
 
+        if (results.items.isEmpty ()) {
+            // No results
+            return false;
+        }
+
         int matched_item_index = Math.min(Math.abs (offset),
                                           results.items.size () - 1);
+
 
         BrowseItem matched_item = results.items.get (matched_item_index);
         String matched_heading = matched_item.sort_key;
