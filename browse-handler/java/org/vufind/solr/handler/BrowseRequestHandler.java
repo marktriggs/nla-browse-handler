@@ -224,7 +224,7 @@ class HeadingsDB
         rs.close ();
         rowStmnt.close ();
 
-        result.total = (totalCount - rowid) + 1;
+        result.total = Math.max(0, (totalCount - rowid) + 1);
 
         return result;
     }
@@ -598,7 +598,7 @@ class Browse
     {
         BrowseList result = new BrowseList ();
 
-        HeadingSlice h = headingsDB.getHeadings (Math.max (0, rowid + offset),
+        HeadingSlice h = headingsDB.getHeadings (Math.max (1, rowid + offset),
                                                  rows);
 
         result.totalCount = h.total;
