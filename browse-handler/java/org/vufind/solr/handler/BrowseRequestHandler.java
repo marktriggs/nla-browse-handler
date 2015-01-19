@@ -52,7 +52,34 @@ class Log
     }
 
 
+    public static String formatBytes(byte[] bytes) {
+        StringBuilder result = new StringBuilder ();
+
+        for (int i = 0; i < bytes.length; i++) {
+            if (i > 0) {
+                result.append (", ");
+            }
+            result.append ("0x");
+            result.append (Integer.toHexString (bytes[i]));
+        }
+
+        return result.toString();
+    }
+
+
+    public static String formatBytes(String s) {
+        try {
+            return formatBytes(s.getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static void info (String s) { log ().info (s); }
+
+    public static void info (String fmt, String s) {
+        log ().info (String.format (fmt, s));
+    }
 }
 
 
@@ -667,8 +694,14 @@ class MatchTypeResponse
 
 
     private MatchType calculateMatchType (String heading, String query) {
+        Log.info ("calculateMatchType heading: %s", Log.formatBytes (heading));
+        Log.info ("calculateMatchType query: %s", Log.formatBytes (query));
+
         byte[] normalizedQuery = normalizer.normalize (query);
         byte[] normalizedHeading = normalizer.normalize (heading);
+
+        Log.info ("calculateMatchType normalizedQuery: %s", Log.formatBytes (query));
+        Log.info ("calculateMatchType normalizedHeading: %s", Log.formatBytes (heading));
 
         if (Arrays.equals (normalizedQuery, normalizedHeading)) {
             return MatchType.EXACT;
