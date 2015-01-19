@@ -91,7 +91,7 @@
   <target name="test" depends="build">
     <mkdir dir="${builddir}/tests"/>
     <javac fork="true" debug="on" srcdir="tests/" destdir="${builddir}/tests"
-           classpath="tests/lib/*:${toString:classpath}">
+           classpath="tests/lib/*:${toString:classpath}:${builddir}/browse-handler">
       <compilerarg line="-encoding UTF-8" />
     </javac>
 
@@ -101,6 +101,7 @@
         <pathelement location="tests/lib/junit-4.11.jar"/>
         <pathelement location="tests/lib/*"/>
         <pathelement location="${builddir}/tests"/>
+        <pathelement location="${builddir}/browse-handler"/>
         <pathelement path="${toString:classpath}"/>
       </classpath>
       <formatter type="plain" usefile="false"/>

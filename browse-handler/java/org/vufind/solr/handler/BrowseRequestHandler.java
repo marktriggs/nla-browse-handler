@@ -674,13 +674,14 @@ class MatchTypeResponse
 {
     private String from;
     private BrowseList results;
-    int rows, offset;
-    Normalizer normalizer;
+    private int rows, offset, rowid;
+    private Normalizer normalizer;
 
-    public MatchTypeResponse (String from, BrowseList results, int rows, int offset, Normalizer normalizer) {
+    public MatchTypeResponse (String from, BrowseList results, int rowid, int rows, int offset, Normalizer normalizer) {
         this.from = from;
         this.results = results;
         this.rows = rows;
+        this.rowid = rowid;
         this.offset = offset;
         this.normalizer = normalizer;
     }
@@ -694,14 +695,8 @@ class MatchTypeResponse
 
 
     private MatchType calculateMatchType (String heading, String query) {
-        Log.info ("calculateMatchType heading: %s", Log.formatBytes (heading));
-        Log.info ("calculateMatchType query: %s", Log.formatBytes (query));
-
         byte[] normalizedQuery = normalizer.normalize (query);
         byte[] normalizedHeading = normalizer.normalize (heading);
-
-        Log.info ("calculateMatchType normalizedQuery: %s", Log.formatBytes (query));
-        Log.info ("calculateMatchType normalizedHeading: %s", Log.formatBytes (heading));
 
         if (Arrays.equals (normalizedQuery, normalizedHeading)) {
             return MatchType.EXACT;
@@ -719,12 +714,31 @@ class MatchTypeResponse
 
 
     public boolean addTo (Map<String,Object> solrResponse) {
+
+        // No match if no rows are displayed
+        if (rows == 0) {
+            return false;
+        }
+
+        int adjustedOffset = offset;
+
+        if ((rowid + offset) < 1) {
+            // Our (negative) offset points before the beginning of the browse
+            // list.  Set it to point to the beginning of the browse list.
+            adjustedOffset = (rowid - 1);
+        }
+
         if (from == null || "".equals (from)) {
             return false;
         }
 
-        if (rows - Math.abs (offset) <= 0) {
-            // The matching browse item isn't visible in the list
+        if (adjustedOffset < 0 && (adjustedOffset + rows) <= 0) {
+            // We're on a page before our matched heading
+            return false;
+        }
+
+        if (adjustedOffset > 0) {
+            // We're on a page after our matched heading
             return false;
         }
 
@@ -733,7 +747,7 @@ class MatchTypeResponse
             return false;
         }
 
-        int matched_item_index = Math.min(Math.abs (offset),
+        int matched_item_index = Math.min(Math.abs (adjustedOffset),
                                           results.items.size () - 1);
 
 
@@ -890,7 +904,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
                 result.put ("startRow", rowid);
                 result.put ("offset", offset);
 
-                new MatchTypeResponse (from, list, rows, offset, NormalizerFactory.getNormalizer (source.normalizer)).addTo (result);
+                new MatchTypeResponse (from, list, rowid, rows, offset, NormalizerFactory.getNormalizer (source.normalizer)).addTo (result);
 
                 rsp.add ("Browse", result);
             } finally {
