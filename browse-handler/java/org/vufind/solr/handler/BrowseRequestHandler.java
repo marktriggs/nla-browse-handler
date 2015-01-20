@@ -713,11 +713,13 @@ class MatchTypeResponse
     }
 
 
-    public boolean addTo (Map<String,Object> solrResponse) {
+    public void addTo (Map<String,Object> solrResponse) {
 
-        // No match if no rows are displayed
+        // Assume no match
+        solrResponse.put ("matchType", MatchType.NONE.toString ());
+
         if (rows == 0) {
-            return false;
+            return;
         }
 
         int adjustedOffset = offset;
@@ -729,22 +731,22 @@ class MatchTypeResponse
         }
 
         if (from == null || "".equals (from)) {
-            return false;
+            return;
         }
 
         if (adjustedOffset < 0 && (adjustedOffset + rows) <= 0) {
             // We're on a page before our matched heading
-            return false;
+            return;
         }
 
         if (adjustedOffset > 0) {
             // We're on a page after our matched heading
-            return false;
+            return;
         }
 
         if (results.items.isEmpty ()) {
             // No results
-            return false;
+            return;
         }
 
         int matched_item_index = Math.min(Math.abs (adjustedOffset),
@@ -755,8 +757,6 @@ class MatchTypeResponse
         String matched_heading = matched_item.sort_key;
 
         solrResponse.put ("matchType", calculateMatchType (matched_heading, from).toString ());
-
-        return true;
     }
 }
 

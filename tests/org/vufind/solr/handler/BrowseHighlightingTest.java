@@ -43,32 +43,32 @@ public class BrowseHighlightingTest {
 
     @Test
     public void noRowsMeansNoMatch() throws Exception {
-        assertEquals(null,
+        assertEquals("NONE",
                      matchTypeFor(fakeBrowseResults("apple", "banana", "cherry"), "apple", 1, 0, 0));
     }
 
 
     @Test
     public void emptyQueryMeansNoMatch() throws Exception {
-        assertEquals(null,
+        assertEquals("NONE",
                      matchTypeFor(fakeBrowseResults("apple", "banana", "cherry"), "", 1, 20, 0));
     }
 
 
     @Test
     public void emptyResultsMeansNoMatch() throws Exception {
-        assertEquals(null,
+        assertEquals("NONE",
                      matchTypeFor(fakeBrowseResults(), "apple", 1, 20, 0));
     }
 
     @Test
     public void onlyShowMatchTypeForFirstPage() throws Exception {
         // Forward a page (matched on "apple")
-        assertEquals(null,
+        assertEquals("NONE",
                      matchTypeFor(fakeBrowseResults("apple", "banana", "cherry", "dates"), "apple", 1, 2, 2));
 
         // Back a page (matched on "cherry")
-        assertEquals(null,
+        assertEquals("NONE",
                      matchTypeFor(fakeBrowseResults("apple", "banana", "cherry", "dates"), "cherry", 3, 2, -2));
 
         // Back a little, but match still visible
@@ -92,7 +92,7 @@ public class BrowseHighlightingTest {
     public void offsetPastEndOfBrowseList() throws Exception {
         // If our offset moves us past the end of the browse list, there are no
         // results and we show no match.
-        assertEquals(null,
+        assertEquals("NONE",
                      matchTypeFor(fakeBrowseResults("apple", "banana", "cherry", "dates"), "dates", 4, 2, 100));
     }
 
