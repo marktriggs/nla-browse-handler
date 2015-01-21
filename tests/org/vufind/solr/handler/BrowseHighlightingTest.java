@@ -85,6 +85,9 @@ public class BrowseHighlightingTest {
         // exact match.
         assertEquals("EXACT",
                      matchTypeFor(fakeBrowseResults("apple", "banana", "cherry", "dates"), "apple", 1, 2, -2));
+
+        assertEquals("HEAD_OF_STRING",
+                     matchTypeFor(fakeBrowseResults("apple", "banana"), "b", 2, 2, -2));
     }
 
 

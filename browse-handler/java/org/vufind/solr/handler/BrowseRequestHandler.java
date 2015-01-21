@@ -727,7 +727,8 @@ class MatchTypeResponse
         if ((rowid + offset) < 1) {
             // Our (negative) offset points before the beginning of the browse
             // list.  Set it to point to the beginning of the browse list.
-            adjustedOffset = (rowid - 1);
+            int distanceToStartOfBrowseList = rowid - 1;
+            adjustedOffset = Math.max(adjustedOffset, -distanceToStartOfBrowseList);
         }
 
         if (from == null || "".equals (from)) {
@@ -755,7 +756,6 @@ class MatchTypeResponse
 
         BrowseItem matched_item = results.items.get (matched_item_index);
         String matched_heading = matched_item.sort_key;
-
         solrResponse.put ("matchType", calculateMatchType (matched_heading, from).toString ());
     }
 }
