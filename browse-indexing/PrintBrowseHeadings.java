@@ -53,6 +53,7 @@ public class PrintBrowseHeadings
             // with different locale settings. Using strings results in less predictable
             // behavior.
             byte[] sort_key = h.key;
+            String key_text = h.key_text;
             String heading = h.value;
 
             if (predicate != null &&
@@ -65,6 +66,8 @@ public class PrintBrowseHeadings
                 // to ensure that no characters overlap with the delimiter or introduce
                 // \n's that could interfere with line-based sorting of the file.
                 out.print (new String (Base64.encodeBase64 (sort_key)) +
+                           KEY_SEPARATOR +
+                           new String (Base64.encodeBase64 (key_text.getBytes(Charset.forName("UTF-8")))) +
                            KEY_SEPARATOR +
                            new String (Base64.encodeBase64 (heading.getBytes(Charset.forName("UTF-8")))) +
                            RECORD_SEPARATOR);

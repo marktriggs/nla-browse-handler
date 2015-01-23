@@ -17,15 +17,21 @@ public class NormalizerFactory {
 	
 	/**
 	 * Create an instance of a class which implements the <code>Normalizer</code> interface.
+     *
+     * If normalizedClass is null, return the default normalizer.
 	 * 
 	 * @param normalizerClass name of a <code>Normalizer</code> class
 	 * @return instance of the named <code>Normalizer</code> class
 	 * @throws Exception if anything goes wrong with creating the class
 	 */
 	public static Normalizer getNormalizer (String normalizerClass) throws Exception {
-        return (Normalizer) (Class.forName (normalizerClass)
-                .getConstructor ()
-                .newInstance ());        
+        if (normalizerClass == null) {
+            return getNormalizer ();
+        } else {
+            return (Normalizer) (Class.forName (normalizerClass)
+                                 .getConstructor ()
+                                 .newInstance ());
+        }
 	}
 	
 	/**
