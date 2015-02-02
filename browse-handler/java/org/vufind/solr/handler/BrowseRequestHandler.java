@@ -702,10 +702,12 @@ class MatchTypeResponse
             return MatchType.EXACT;
         }
 
-        for (int i = 0; i < heading.length (); i++) {
-            byte[] normalizedHeadingPrefix = normalizer.normalize (heading.substring (0, i));
-            if (Arrays.equals (normalizedQuery, normalizedHeadingPrefix)) {
-                return MatchType.HEAD_OF_STRING;
+        if (heading.length() > 0) {
+            for (int i = 1; i < heading.length (); i++) {
+                byte[] normalizedHeadingPrefix = normalizer.normalize (heading.substring (0, i));
+                if (Arrays.equals (normalizedQuery, normalizedHeadingPrefix)) {
+                    return MatchType.HEAD_OF_STRING;
+                }
             }
         }
 
