@@ -1,0 +1,9 @@
+language: java
+jdk:
+  - openjdk7
+
+before_script:
+  - wget https://github.com/vufind-org/vufind/raw/master/solr/jetty/webapps/solr.war
+
+script:
+  - ant test -Dsolr.war=solr.war
