@@ -2,7 +2,6 @@ import org.apache.lucene.store.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.search.*;
 import java.io.*;
-import java.util.*;
 
 import org.vufind.util.BrowseEntry;
 import org.vufind.util.Normalizer;

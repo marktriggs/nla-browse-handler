@@ -1,9 +1,6 @@
 package org.vufind.util;
 
-import java.io.*;
-import java.util.*;
 import java.util.regex.*;
-import org.vufind.util.*;
 
 import com.ibm.icu.text.Collator;
 
