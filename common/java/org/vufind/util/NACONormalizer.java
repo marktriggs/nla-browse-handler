@@ -15,6 +15,9 @@ import com.ibm.icu.text.Collator;
  * <li>
  * left and right single and double quotes
  * </li>
+ * <li>
+ * MODIFIER LETTER LEFT HALF RING <U02BF>
+ * </li>
  * </ol>
  * 
  * Not yet implemented:
@@ -23,7 +26,7 @@ import com.ibm.icu.text.Collator;
  * commas: all commas are converted to blanks, first comma in ‡a is <em>not</em> retained
  * </li>
  * <li>
- * eszedt, thorn, and eth are not normalized to their two-character equivalents
+ * eszedt, and thorn are not normalized to their two-character equivalents
  * </li>
  * <li>
  * Inverted question mark is not normalized
@@ -46,7 +49,7 @@ public class NACONormalizer implements Normalizer {
     /**
      * Characters that will be deleted during normalization.
      */
-    static private String deleteChars = "['\\[\\]\u02BA\u02BB\u02BC\u02B9]";
+    static private String deleteChars = "['\\[\\]\u02BA\u02BB\u02BC\u02B9\u02BF]";
 
     /**
      * Characters that will be converted to spaces during normalization.
