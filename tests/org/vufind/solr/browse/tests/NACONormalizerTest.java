@@ -52,7 +52,6 @@ public class NACONormalizerTest
                                     "Banana", "grapefruit",
                                     "   inappropriate leading space",
                                     "Äardvark", "Apple", "AAA")));
-
     }
 
     @Test
@@ -107,10 +106,10 @@ public class NACONormalizerTest
         // High comma centered
         // High comma off center
         // Left hook
-        // Ligature (first/second half)vospominanii︠a︡
-        assertArrayEquals (nacoNormalizer.normalize ("vospominanii︠a︡"), nacoNormalizer.normalize ("vospominaniia"));
-        // Ligature (single) [not in NACO, but we get them in Unicode]
+        // Ligature (single) [current preferred representation]
         assertArrayEquals (nacoNormalizer.normalize ("Novai͡a"), nacoNormalizer.normalize ("Novaia"));
+        // Ligature (first/second half) [older convention]
+        assertArrayEquals (nacoNormalizer.normalize ("vospominanii︠a︡"), nacoNormalizer.normalize ("vospominaniia"));
         // Macron
         assertArrayEquals (nacoNormalizer.normalize ("Pāli"), nacoNormalizer.normalize ("Pali"));
         // Pseudo question mark
@@ -319,6 +318,31 @@ public class NACONormalizerTest
         assertArrayEquals (nacoNormalizer.normalize ("middle\u00B7dot"), nacoNormalizer.normalize ("middle dot"));
     }
     
+    @Test
+    public void obsoleteConversions () {
+        // MODIFIER LETTER LEFT HALF RING <U02BF>       Delete -- formerly used for Ayn
+        assertArrayEquals (nacoNormalizer.normalize ("Mua\u02BFllim"), nacoNormalizer.normalize ("Muallim"));
+    }
+
+    // Some NACO-specific sorting
+
+    @Test
+    public void sortAuthorNames () {
+        assertEquals (listOf ("ʿAbd al-ʿAzīz, Kamāl",
+                              "'Abd al-Bari, 'Abd al-Majid al-Shaykh",
+                              "Abd al-Fattāḥ, Khālid Salīm",
+                              "ʿAbd al-Mawjūd, ʿĀdil Aḥmad",
+                              "ʿAbd al-Qaddūs, Iḥsān",
+                              "ʿAdī, Saʿīd"),
+                sort (listOf ("ʿAbd al-Qaddūs, Iḥsān",
+                              "'Abd al-Bari, 'Abd al-Majid al-Shaykh",
+                              "ʿAdī, Saʿīd",
+                              "ʿAbd al-Mawjūd, ʿĀdil Aḥmad",
+                              "ʿAbd al-ʿAzīz, Kamāl",
+                              "Abd al-Fattāḥ, Khālid Salīm")));
+    }
+
+
     //
     // Helpers
     //
