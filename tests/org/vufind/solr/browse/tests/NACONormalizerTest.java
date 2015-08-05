@@ -259,6 +259,10 @@ public class NACONormalizerTest
         assertArrayEquals (nacoNormalizer.normalize ("left“quote"), nacoNormalizer.normalize ("left quote"));
         // RIGHT DOUBLE QUOTATION MARK     Blank
         assertArrayEquals (nacoNormalizer.normalize ("right”quote"), nacoNormalizer.normalize ("right”quote"));
+        // LEFT-POINTING DOUBLE ANGLE QUOTATION MARK      Blank
+        assertArrayEquals (nacoNormalizer.normalize ("left«quote"), nacoNormalizer.normalize ("left quote"));
+        // RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK     Blank
+        assertArrayEquals (nacoNormalizer.normalize ("right»quote"), nacoNormalizer.normalize ("right”quote"));
     }
     
     @Test

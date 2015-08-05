@@ -16,6 +16,11 @@ import com.ibm.icu.text.Collator;
  * left and right single and double quotes
  * </li>
  * <li>
+ * European-style quotes, «»:<br>
+ * LEFT-POINTING DOUBLE ANGLE QUOTATION MARK &lt;U+00AB><br>
+ * RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK &lt;U+00BB>
+ * </li>
+ * <li>
  * MODIFIER LETTER LEFT HALF RING <U02BF>
  * </li>
  * </ol>
@@ -54,7 +59,7 @@ public class NACONormalizer implements Normalizer {
     /**
      * Characters that will be converted to spaces during normalization.
      */
-    static private String spaceChars = "[\\p{Punct}¿¡‘’“”±⁺⁻℗®©°·]";
+    static private String spaceChars = "[\\p{Punct}¿¡‘’“”«»±⁺⁻℗®©°·]";
 
     /**
      * Pattern to match characters that will be deleted during normalization.
