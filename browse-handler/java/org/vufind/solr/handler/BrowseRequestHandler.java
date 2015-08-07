@@ -8,7 +8,7 @@ package org.vufind.solr.handler;
 
 
 import org.apache.lucene.document.Document;
-import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
@@ -433,7 +433,7 @@ class BibDB
             bibinfo.put (bibExtras[i], new ArrayList<Collection<String>> ());
         }
 
-        db.search (q, new Collector () {
+        db.search (q, new SimpleCollector () {
                 private int docBase;
 
                 public void setScorer (Scorer scorer) {
@@ -441,6 +441,10 @@ class BibDB
 
                 public boolean acceptsDocsOutOfOrder () {
                     return true;
+                }
+
+                public boolean needsScores () {
+                    return false;
                 }
 
                 public void collect (int docnum) {
@@ -471,7 +475,7 @@ class BibDB
 
                 }
 
-                public void setNextReader (AtomicReaderContext context)
+                public void setNextReader (LeafReaderContext context)
                     throws IOException 
                 {
                     this.docBase = context.docBase;
@@ -789,7 +793,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
      *  {@link SolrRequestHandler#init(NamedList args)} is not defined with a type.
      *  So there's a warning.
      */
-    public void init (NamedList args)
+    public void init (@SuppressWarnings("rawtypes") NamedList args)
     {
         super.init (args);
 

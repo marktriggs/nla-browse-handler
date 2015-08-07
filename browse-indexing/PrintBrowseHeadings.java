@@ -161,7 +161,7 @@ public class PrintBrowseHeadings
         bibLeech = getBibLeech (bibPath, luceneField);
         this.luceneField = luceneField;
 
-        IndexReader bibReader = DirectoryReader.open (FSDirectory.open (new File (bibPath)));
+        IndexReader bibReader = DirectoryReader.open (FSDirectory.open (new File (bibPath).toPath ()));
         bibSearcher = new IndexSearcher (bibReader);
 
         PrintWriter out = new PrintWriter (new FileWriter (outFile));
@@ -171,7 +171,7 @@ public class PrintBrowseHeadings
                                           System.getProperty ("field.insteadof",
                                                               "insteadOf"));
 
-            IndexReader authReader = DirectoryReader.open (FSDirectory.open (new File (authPath)));
+            IndexReader authReader = DirectoryReader.open (FSDirectory.open (new File (authPath).toPath ()));
             authSearcher = new IndexSearcher (authReader);
 
             loadHeadings (nonprefAuthLeech, out,

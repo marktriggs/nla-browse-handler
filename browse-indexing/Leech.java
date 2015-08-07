@@ -23,7 +23,7 @@ public class Leech
     public Leech (String indexPath,
                   String field) throws Exception
     {
-        reader = DirectoryReader.open (FSDirectory.open (new File (indexPath)));
+        reader = DirectoryReader.open (FSDirectory.open (new File (indexPath).toPath ()));
         searcher = new IndexSearcher (reader);
         this.field = field;
 
@@ -63,12 +63,12 @@ public class Leech
     public BrowseEntry next () throws Exception
     {
         if (tenum == null) {
-            AtomicReader ir = SlowCompositeReaderWrapper.wrap(reader);
+            LeafReader ir = SlowCompositeReaderWrapper.wrap(reader);
             Terms terms = ir.terms(this.field);
             if (terms == null) {
                 return null;
             }
-            tenum = terms.iterator(null);
+            tenum = terms.iterator();
         }
 
         if (tenum.next() != null) {

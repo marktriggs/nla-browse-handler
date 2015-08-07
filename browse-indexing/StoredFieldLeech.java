@@ -39,7 +39,7 @@ public class StoredFieldLeech extends Leech
         fieldSelection.add(valueField);
         fieldSelection.add("id");   // make Solr id available for error messages
 
-        reader = DirectoryReader.open (FSDirectory.open (new File (indexPath)));
+        reader = DirectoryReader.open (FSDirectory.open (new File (indexPath).toPath ()));
         buffer = new LinkedList<BrowseEntry> ();
     }
 
