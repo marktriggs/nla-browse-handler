@@ -434,7 +434,7 @@ class BibDB
         }
 
         db.search (q, new SimpleCollector () {
-                private int docBase;
+                private LeafReaderContext context;
 
                 public void setScorer (Scorer scorer) {
                 }
@@ -447,8 +447,13 @@ class BibDB
                     return false;
                 }
 
+                public void doSetNextReader(LeafReaderContext context) {
+                    this.context = context;
+                }
+
+
                 public void collect (int docnum) {
-                    int docid = docnum + docBase;
+                    int docid = docnum + context.docBase;
                     try {
                         Document doc = db.getIndexReader ().document (docid);
 
@@ -473,12 +478,6 @@ class BibDB
                         Log.info ("Exception thrown: " + e);
                     }
 
-                }
-
-                public void setNextReader (LeafReaderContext context)
-                    throws IOException 
-                {
-                    this.docBase = context.docBase;
                 }
             });
 
