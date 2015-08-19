@@ -3,16 +3,12 @@
 //
 
 import java.io.*;
-import java.util.*;
-import java.util.regex.*;
 import java.nio.charset.*;
 
 import org.apache.lucene.store.*;
 import org.apache.lucene.search.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.document.*;
-
-import java.sql.*;
 
 import org.vufind.util.BrowseEntry;
 
@@ -23,7 +19,6 @@ import org.apache.commons.codec.binary.Base64;
 public class PrintBrowseHeadings
 {
     private Leech bibLeech;
-    private Leech authLeech;
     private Leech nonprefAuthLeech;
 
     IndexSearcher bibSearcher;

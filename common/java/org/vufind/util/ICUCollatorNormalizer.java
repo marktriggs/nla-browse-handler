@@ -1,10 +1,8 @@
 package org.vufind.util;
 
-import java.io.*;
-import java.util.*;
 import java.util.regex.*;
-import org.vufind.util.*;
 
+import com.ibm.icu.text.CollationKey;
 import com.ibm.icu.text.Collator;
 
 /**
@@ -50,8 +48,8 @@ public class ICUCollatorNormalizer implements Normalizer
         return iCUCollatorNormalizer;
     }
 
-
-    public byte[] normalize (String s)
+    // Breaking out the CollationKey makes testing and debugging easier 
+    public CollationKey normalizeToKey (String s)
     {
         s = s.replaceAll ("-", "")
             .replaceAll ("\\p{Punct}", " ")
@@ -60,6 +58,11 @@ public class ICUCollatorNormalizer implements Normalizer
 
         s = junkregexp.matcher (s) .replaceAll ("");
 
-        return collator.getCollationKey (s).toByteArray ();
+        return collator.getCollationKey (s);
+    }
+
+    public byte[] normalize (String s)
+    {
+        return normalizeToKey (s).toByteArray ();
     }
 }
