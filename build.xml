@@ -4,8 +4,7 @@
   <property name="build.sysclasspath" value="last"/>
   <property name="testdir" value="${builddir}/tests"/>
   <property name="testoutputdir" value="${testdir}/output"/>
-  <property name="solr.war" value="../solr/jetty/webapps/solr.war"/>
-  <property name="solr.dir" value="../solr/jetty/webapps/solr/"/>
+  <property name="vufind.dir" value="/usr/local/vufind"/>
   <property name="java.compat.version" value="1.7"/>
   <property name="ant.build.javac.source" value="1.7"/>
   <property name="ant.build.javac.target" value="1.7"/>
@@ -15,19 +14,25 @@
     <fileset dir="${builddir}/deps/"><include name="**/*.jar"/></fileset>
     <fileset dir="libs"><include name="**/*.jar"/></fileset>
     <fileset erroronmissingdir="false" dir="${solr.dir}"><include name="**/*.jar"/></fileset>
+    <fileset erroronmissingdir="false" dir="${vufind.dir}/solr/vendor/dist"><include name="**/*.jar"/></fileset>
+    <fileset erroronmissingdir="false" dir="${vufind.dir}/solr/vendor/server/solr-webapp/webapp/WEB-INF/lib"><include name="**/*.jar"/></fileset>
   </path>
 
   <target name="setup">
     <mkdir dir="${builddir}"/>
     <mkdir dir="${builddir}/deps"/>
     <mkdir dir="${builddir}/bundled-deps"/>
-    <antcall target="setup-solr-war"/>
+    <antcall target="setup-solr-deps"/>
   </target>
 
-  <target name="setup-solr-war" if="solr.war">
-    <unwar src="${solr.war}" dest="${builddir}/deps/"/>
+  <target name="setup-solr-deps">
+    <available file="${vufind.dir}/solr/jetty/webapps/solr.war" property="solr.war.present"/>
+    <antcall target="unpack-solr-war"/>
   </target>
 
+  <target name="unpack-solr-war" if="solr.war.present">
+    <unwar src="${vufind.dir}/solr/jetty/webapps/solr.war" dest="${builddir}/deps/"/>
+  </target>
 
   <target name="build" depends="clean, setup, build-common, build-handler, build-indexing">
   </target>

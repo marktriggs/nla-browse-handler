@@ -17,7 +17,7 @@
 
  You'll need Ant to get everything compiled:
 
-  ant jars -Dsolr.war=/path/to/my/webapps/solr.war
+  ant jars -Dvufind.dir=/usr/local/vufind
 
  should give you the two required jar files:
 
@@ -146,4 +146,4 @@
 
 Running the unit tests:
 
-     ant test -Dsolr.war=/path/to/my/webapps/solr.war
+     ant test -Dvufind.dir=/usr/local/vufind
