@@ -4,8 +4,8 @@ jdk:
   - openjdk7
 
 before_script:
-  - wget https://github.com/vufind-org/vufind/archive/v2.5.zip
-  - unzip v2.5.zip
+  - wget https://github.com/vufind-org/vufind/archive/solr5.zip
+  - unzip solr5.zip
 
 script:
-  - ant test -Dvufind.dir=vufind-2.5
+  - ant test -Dvufind.dir=vufind-solr5
