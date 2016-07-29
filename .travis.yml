@@ -8,4 +8,4 @@ before_script:
   - unzip v3.0.2.zip
 
 script:
-  - ant test -Dvufind.dir=vufind-v3.0.2
+  - ant test -Dvufind.dir=vufind-3.0.2
