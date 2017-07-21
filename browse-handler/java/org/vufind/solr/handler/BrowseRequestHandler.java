@@ -344,8 +344,7 @@ class AuthDB
     {
         Document authInfo = getAuthorityRecord(heading);
 
-        Map<String, List<String>> itemValues =
-            new HashMap<String,List<String>> ();
+        Map<String, List<String>> itemValues = new HashMap<> ();
 
         itemValues.put("seeAlso", new ArrayList<String>());
         itemValues.put("useInstead", new ArrayList<String>());
@@ -432,11 +431,11 @@ class BibDB
         // bibinfo values are List<Collection> because some extra fields
         // may be multi-valued.
         // Note: it may be time for bibinfo to become a class...
-        final Map<String, List<Collection<String>>> bibinfo = new HashMap<String,List<Collection<String>>> ();
+        final Map<String, List<Collection<String>>> bibinfo = new HashMap<> ();
         bibinfo.put("ids", new ArrayList<Collection<String>> ());
         final String[] bibExtras = extras.split(":");
-        for (int i = 0; i < bibExtras.length; i++) {
-            bibinfo.put(bibExtras[i], new ArrayList<Collection<String>> ());
+        for (String bibField : bibExtras) {
+            bibinfo.put(bibField, new ArrayList<Collection<String>> ());
         }
 
         db.search(q, new SimpleCollector() {
@@ -464,18 +463,17 @@ class BibDB
                     Document doc = db.getIndexReader().document(docid);
 
                     String[] vals = doc.getValues("id");
-                    Collection<String> id = new HashSet<String> ();
+                    Collection<String> id = new HashSet<> ();
                     id.add(vals[0]);
                     bibinfo.get("ids").add(id);
-                    for (int i = 0; i < bibExtras.length; i++) {
-                        vals = doc.getValues(bibExtras[i]);
-                        // bibinfo.get (bibExtras[i]).add (vals[0]);
+                    for (String bibField : bibExtras) {
+                        vals = doc.getValues(bibField);
                         if (vals.length > 0) {
-                            Collection<String> valSet = new LinkedHashSet<String> ();
-                            for (int j = 0; j< vals.length; j++) {
-                                valSet.add(vals[j]);
+                            Collection<String> valSet = new LinkedHashSet<> ();
+                            for (String val : vals) {
+                                valSet.add(val);
                             }
-                            bibinfo.get(bibExtras[i]).add(valSet);
+                            bibinfo.get(bibField).add(valSet);
                         }
                     }
                 } catch (org.apache.lucene.index.CorruptIndexException e) {
@@ -521,7 +519,7 @@ class BrowseItem
     public String sort_key;
     public String heading;
     public List<String> ids;
-    public Map<String, List<Collection<String>>> extras = new HashMap<String, List<Collection<String>>> ();
+    public Map<String, List<Collection<String>>> extras = new HashMap<> ();
     int count;
 
 
@@ -544,7 +542,7 @@ class BrowseItem
 
     public Map<String, Object> asMap()
     {
-        Map<String, Object> result = new HashMap<String, Object> ();
+        Map<String, Object> result = new HashMap<> ();
 
         result.put("sort_key", sort_key);
         result.put("heading", heading);
@@ -793,7 +791,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
     public static final String DFLT_AUTH_CORE_NAME = "authority";
     protected String authCoreName = null;
 
-    private Map<String,BrowseSource> sources = new HashMap<String,BrowseSource> ();
+    private Map<String,BrowseSource> sources = new HashMap<> ();
     private SolrParams solrParams;
 
 
@@ -810,7 +808,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
         authCoreName = solrParams.get("authCoreName", DFLT_AUTH_CORE_NAME);
 
-        sources = new HashMap<String, BrowseSource> ();
+        sources = new HashMap<> ();
 
         for (String source : Arrays.asList(solrParams.get
                                            ("sources").split(","))) {
@@ -912,7 +910,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
                 BrowseList list = source.browse.getList(rowid, offset, rows, extras);
 
-                Map<String,Object> result = new HashMap<String, Object> ();
+                Map<String,Object> result = new HashMap<> ();
 
                 result.put("totalCount", list.totalCount);
                 result.put("items", list.asMap());
