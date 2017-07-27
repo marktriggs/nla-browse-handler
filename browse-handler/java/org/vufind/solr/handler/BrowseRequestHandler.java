@@ -265,7 +265,7 @@ class HeadingsDB
 
 
 
-/*
+/**
  *
  * Interface to the Solr Authority DB
  *
@@ -376,7 +376,7 @@ class AuthDB
 
 
 
-/*
+/**
  *
  * Interface to the Solr biblio db
  *
@@ -409,14 +409,14 @@ class BibDB
     }
 
 
-    /*
+    /**
      *
      * Function to retireve the doc ids when there is a building limit
      * This retrieves the doc ids for an individual heading
      *
      * Need to add a filter query to limit the results from Solr
      *
-     * I think this is where we would add the functionality to retrieve additional info
+     * Includes functionality to retrieve additional info
      * like titles for call numbers, possibly ISBNs
      *
      * @param heading  string of the heading to use for finding matching docs
@@ -778,7 +778,7 @@ class MatchTypeResponse
 
 /**
  * Handles the browse request: looks up the heading, consults the biblio core number of hits
- * and the authority core for cross refernces.
+ * and the authority core for cross references.
  *
  * By default the name of the authority core is <code>authority</code>. This can be overridden
  * by setting the parameter <core>authCoreName</core> in the handler configuration in
@@ -797,7 +797,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
     private SolrParams solrParams;
 
 
-    /*
+    /**
      *  RequestHandlerBase implements SolrRequestHandler. As of Solr 4.2.1,
      *  {@link SolrRequestHandler#init(NamedList args)} is not defined with a type.
      *  So there's a warning.
