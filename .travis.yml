@@ -33,7 +33,7 @@ before_script:
   - cd ..
 
 script:
-  - ant test -Dvufind.dir=vufind-4.0
+  - ant test -Dvufind.dir=vufind
 
 cache:
   directories:
