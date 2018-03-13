@@ -17,7 +17,7 @@ addons:
 
 # set up a small VuFind and load some records
 before_script:
-  - if [ ! -d vufind ]; then git clone https://github.com/vufind-org/vufind.git; fi;
+  - if [ ! -d vufind/.git ]; then git clone https://github.com/vufind-org/vufind.git; fi;
   - cd vufind
   - git pull
   - php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
