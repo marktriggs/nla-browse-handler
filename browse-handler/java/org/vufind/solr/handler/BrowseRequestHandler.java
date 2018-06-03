@@ -26,14 +26,27 @@ import org.apache.solr.core.CoreContainer;
 import org.apache.solr.core.CoreDescriptor;
 import org.apache.solr.core.SolrCore;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.vufind.util.*;
-import org.apache.lucene.search.*;
-import org.apache.lucene.document.*;
+import org.apache.lucene.search.SimpleCollector;
+import org.apache.lucene.document.Document;
 
 import java.util.logging.Logger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -92,8 +105,8 @@ class Log
 
 class HeadingSlice
 {
-    public List<String> sort_keys = new ArrayList<String> ();
-    public List<String> headings = new ArrayList<String> ();
+    public List<String> sort_keys = new ArrayList<> ();
+    public List<String> headings = new ArrayList<> ();
     public int total;
 }
 
@@ -329,7 +342,7 @@ class AuthDB
                                            heading)),
                                            MAX_PREFERRED_HEADINGS));
 
-        List<Document> result = new Vector<Document> ();
+        List<Document> result = new ArrayList<> ();
 
         for (int i = 0; i < results.totalHits; i++) {
             result.add(searcher.getIndexReader().document(results.scoreDocs[i].doc));
@@ -428,12 +441,12 @@ class BibDB
     {
         TermQuery q = new TermQuery(new Term(field, heading));
 
-        // bibinfo values are List<Collection> because some extra fields
-        // may be multi-valued.
-        // Note: it may be time for bibinfo to become a class...
+	// bibinfo values are List<Collection> because some extra fields 
+	// may be multi-valued.
+	// Note: it may be time for bibinfo to become a class...
         final Map<String, List<Collection<String>>> bibinfo = new HashMap<> ();
-        bibinfo.put("ids", new ArrayList<Collection<String>> ());
-        final String[] bibExtras = extras.split(":");
+        bibinfo.put ("ids", new ArrayList<Collection<String>> ());
+        final String[] bibExtras = extras.split (":");
         for (String bibField : bibExtras) {
             bibinfo.put(bibField, new ArrayList<Collection<String>> ());
         }
@@ -494,12 +507,12 @@ class BibDB
 class BrowseList
 {
     public int totalCount;
-    public List<BrowseItem> items = new ArrayList<BrowseItem> ();
+    public List<BrowseItem> items = new ArrayList<> ();
 
 
     public List<Map<String, Object>> asMap()
     {
-        List<Map<String, Object>> result = new ArrayList<Map<String, Object>> ();
+        List<Map<String, Object>> result = new ArrayList<> ();
 
         for (BrowseItem item : items) {
             result.add(item.asMap());
@@ -513,8 +526,8 @@ class BrowseList
 
 class BrowseItem
 {
-    public List<String> seeAlso = new LinkedList<String> ();
-    public List<String> useInstead = new LinkedList<String> ();
+    public List<String> seeAlso = new ArrayList<> ();
+    public List<String> useInstead = new ArrayList<> ();
     public String note = "";
     public String sort_key;
     public String heading;
@@ -808,7 +821,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
         authCoreName = solrParams.get("authCoreName", DFLT_AUTH_CORE_NAME);
 
-        sources = new HashMap<> ();
+        sources = new ConcurrentHashMap<> ();
 
         for (String source : Arrays.asList(solrParams.get
                                            ("sources").split(","))) {
