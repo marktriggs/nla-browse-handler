@@ -49,7 +49,6 @@ import org.apache.lucene.search.SimpleCollector;
 import org.apache.lucene.document.Document;
 
 import java.util.logging.Logger;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.vufind.util.Normalizer;
 import org.vufind.util.NormalizerFactory;
@@ -120,8 +119,6 @@ class HeadingsDB
     int totalCount;
     Normalizer normalizer;
 
-    ReentrantReadWriteLock dbLock = new ReentrantReadWriteLock();
-
     public HeadingsDB(String path)
     {
         try {
@@ -176,52 +173,36 @@ class HeadingsDB
     }
 
 
-    synchronized public void reopenIfUpdated()
+    public void reopenIfUpdated()
     {
-        try {
-            dbLock.readLock().lock();
-
-            File flag = new File(path + "-ready");
-            File updated = new File(path + "-updated");
-            if (db == null || (flag.exists() && updated.exists())) {
-                Log.info("Index update event detected!");
-                try {
-                    dbLock.readLock().unlock();
-                    dbLock.writeLock().lock();
-
-                    if (flag.exists() && updated.exists()) {
-                        Log.info ("Installing new index version...");
-                        if (db != null) {
-                            db.close();
-                        }
-
-                        File pathFile = new File(path);
-                        pathFile.delete();
-                        updated.renameTo(pathFile);
-                        flag.delete();
-
-                        Log.info("Reopening HeadingsDB");
-                        openDB();
-                    } else if (db == null) {
-                        openDB();
+        File flag = new File(path + "-ready");
+        File updated = new File(path + "-updated");
+        if (db == null || (flag.exists() && updated.exists())) {
+            Log.info("Index update event detected!");
+            try {
+                if (flag.exists() && updated.exists()) {
+                    Log.info("Installing new index version...");
+                    if (db != null) {
+                        db.close();
                     }
-                } finally {
-                    dbLock.readLock().lock();
-                    dbLock.writeLock().unlock();
+
+                    File pathFile = new File(path);
+                    pathFile.delete();
+                    updated.renameTo(pathFile);
+                    flag.delete();
+
+                    Log.info("Reopening HeadingsDB");
+                    openDB();
+                } else if (db == null) {
+                    openDB();
                 }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
     }
 
-    public void queryFinished()
-    {
-        dbLock.readLock().unlock();
-    }
-
-
-    public int getHeadingStart(String from) throws Exception
+    public synchronized int getHeadingStart(String from) throws Exception
     {
         PreparedStatement rowStmnt = db.prepareStatement(
                                          "select rowid from headings " +
@@ -241,9 +222,9 @@ class HeadingsDB
     }
 
 
-    public HeadingSlice getHeadings(int rowid,
-                                    int rows)
-    throws Exception
+    public synchronized HeadingSlice getHeadings(int rowid,
+                                                 int rows)
+        throws Exception
     {
         HeadingSlice result = new HeadingSlice();
 
@@ -668,6 +649,7 @@ class BrowseSource
     public String normalizer;
 
     private HeadingsDB headingsDB = null;
+    private long loanCount = 0;
 
 
     public BrowseSource(String DBpath,
@@ -688,9 +670,19 @@ class BrowseSource
             headingsDB = new HeadingsDB (this.DBpath, this.normalizer);
         }
 
-        headingsDB.reopenIfUpdated();
+        // If no queries are running, it's a safepoint to reopen the browse index.
+        if (loanCount <= 0) {
+            headingsDB.reopenIfUpdated();
+            loanCount = 0;
+        }
+
+        loanCount += 1;
 
         return headingsDB;
+    }
+
+    public synchronized void returnHeadingsDB(HeadingsDB headingsDB) {
+        loanCount -= 1;
     }
 }
 
@@ -935,7 +927,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
             authSearcherRef.decref();
 
             if (headingsDB != null) {
-                headingsDB.queryFinished();
+                source.returnHeadingsDB(headingsDB);
             }
         }
     }
