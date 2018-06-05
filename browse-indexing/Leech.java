@@ -102,7 +102,7 @@ public class Leech
         } else {
             // Exhausted this reader
             tenum = null;
-            return null;
+            return next();
         }
     }
 }
