@@ -26,17 +26,29 @@ import org.apache.solr.core.CoreContainer;
 import org.apache.solr.core.CoreDescriptor;
 import org.apache.solr.core.SolrCore;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.vufind.util.*;
-import org.apache.lucene.search.*;
-import org.apache.lucene.document.*;
+import org.apache.lucene.search.SimpleCollector;
+import org.apache.lucene.document.Document;
 
 import java.util.logging.Logger;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.vufind.util.Normalizer;
 import org.vufind.util.NormalizerFactory;
@@ -92,8 +104,8 @@ class Log
 
 class HeadingSlice
 {
-    public List<String> sort_keys = new ArrayList<String> ();
-    public List<String> headings = new ArrayList<String> ();
+    public List<String> sort_keys = new ArrayList<> ();
+    public List<String> headings = new ArrayList<> ();
     public int total;
 }
 
@@ -107,20 +119,25 @@ class HeadingsDB
     int totalCount;
     Normalizer normalizer;
 
-    ReentrantReadWriteLock dbLock = new ReentrantReadWriteLock();
-
-    public HeadingsDB(String path) throws Exception
+    public HeadingsDB(String path)
     {
-        this.path = path;
-        normalizer = NormalizerFactory.getNormalizer();
+        try {
+            this.path = path;
+            normalizer = NormalizerFactory.getNormalizer ();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    public HeadingsDB(String path, String normalizerClassName) throws Exception
+    public HeadingsDB(String path, String normalizerClassName)
     {
         Log.info("constructor: HeadingsDB (" + path + ", " + normalizerClassName + ")");
-
-        this.path = path;
-        normalizer = NormalizerFactory.getNormalizer(normalizerClassName);
+        try {
+            this.path = path;
+            normalizer = NormalizerFactory.getNormalizer(normalizerClassName);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
 
@@ -156,18 +173,13 @@ class HeadingsDB
     }
 
 
-    synchronized public void reopenIfUpdated() throws Exception
+    public void reopenIfUpdated()
     {
-        dbLock.readLock().lock();
-
         File flag = new File(path + "-ready");
         File updated = new File(path + "-updated");
         if (db == null || (flag.exists() && updated.exists())) {
             Log.info("Index update event detected!");
             try {
-                dbLock.readLock().unlock();
-                dbLock.writeLock().lock();
-
                 if (flag.exists() && updated.exists()) {
                     Log.info("Installing new index version...");
                     if (db != null) {
@@ -175,29 +187,22 @@ class HeadingsDB
                     }
 
                     File pathFile = new File(path);
-                    pathFile.delete ();
+                    pathFile.delete();
                     updated.renameTo(pathFile);
-                    flag.delete ();
+                    flag.delete();
 
                     Log.info("Reopening HeadingsDB");
                     openDB();
                 } else if (db == null) {
                     openDB();
                 }
-            } finally {
-                dbLock.readLock().lock();
-                dbLock.writeLock().unlock();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
     }
 
-    public void queryFinished()
-    {
-        dbLock.readLock().unlock();
-    }
-
-
-    public int getHeadingStart(String from) throws Exception
+    public synchronized int getHeadingStart(String from) throws Exception
     {
         PreparedStatement rowStmnt = db.prepareStatement(
                                          "select rowid from headings " +
@@ -217,9 +222,9 @@ class HeadingsDB
     }
 
 
-    public HeadingSlice getHeadings(int rowid,
-                                    int rows)
-    throws Exception
+    public synchronized HeadingSlice getHeadings(int rowid,
+                                                 int rows)
+        throws Exception
     {
         HeadingSlice result = new HeadingSlice();
 
@@ -329,7 +334,7 @@ class AuthDB
                                            heading)),
                                            MAX_PREFERRED_HEADINGS));
 
-        List<Document> result = new Vector<Document> ();
+        List<Document> result = new ArrayList<> ();
 
         for (int i = 0; i < results.totalHits; i++) {
             result.add(searcher.getIndexReader().document(results.scoreDocs[i].doc));
@@ -428,12 +433,12 @@ class BibDB
     {
         TermQuery q = new TermQuery(new Term(field, heading));
 
-        // bibinfo values are List<Collection> because some extra fields
-        // may be multi-valued.
-        // Note: it may be time for bibinfo to become a class...
+	// bibinfo values are List<Collection> because some extra fields 
+	// may be multi-valued.
+	// Note: it may be time for bibinfo to become a class...
         final Map<String, List<Collection<String>>> bibinfo = new HashMap<> ();
-        bibinfo.put("ids", new ArrayList<Collection<String>> ());
-        final String[] bibExtras = extras.split(":");
+        bibinfo.put ("ids", new ArrayList<Collection<String>> ());
+        final String[] bibExtras = extras.split (":");
         for (String bibField : bibExtras) {
             bibinfo.put(bibField, new ArrayList<Collection<String>> ());
         }
@@ -494,12 +499,12 @@ class BibDB
 class BrowseList
 {
     public int totalCount;
-    public List<BrowseItem> items = new ArrayList<BrowseItem> ();
+    public List<BrowseItem> items = new ArrayList<> ();
 
 
     public List<Map<String, Object>> asMap()
     {
-        List<Map<String, Object>> result = new ArrayList<Map<String, Object>> ();
+        List<Map<String, Object>> result = new ArrayList<> ();
 
         for (BrowseItem item : items) {
             result.add(item.asMap());
@@ -513,8 +518,8 @@ class BrowseList
 
 class BrowseItem
 {
-    public List<String> seeAlso = new LinkedList<String> ();
-    public List<String> useInstead = new LinkedList<String> ();
+    public List<String> seeAlso = new ArrayList<> ();
+    public List<String> useInstead = new ArrayList<> ();
     public String note = "";
     public String sort_key;
     public String heading;
@@ -566,31 +571,12 @@ class Browse
     private AuthDB authDB;
     private BibDB bibDB;
 
-
-    public Browse(HeadingsDB headings, AuthDB auth)
+    public Browse(HeadingsDB headings, BibDB bibdb, AuthDB auth)
     {
         headingsDB = headings;
         authDB = auth;
+        bibDB = bibdb;
     }
-
-
-    public void setBibDB(BibDB b)
-    {
-        this.bibDB = b;
-    }
-
-
-    public synchronized void reopenDatabasesIfUpdated() throws Exception
-    {
-        headingsDB.reopenIfUpdated();
-    }
-
-
-    public void queryFinished()
-    {
-        headingsDB.queryFinished();
-    }
-
 
     private void populateItem(BrowseItem item, String extras) throws Exception
     {
@@ -662,7 +648,8 @@ class BrowseSource
     public String dropChars;
     public String normalizer;
 
-    public Browse browse;
+    private HeadingsDB headingsDB = null;
+    private long loanCount = 0;
 
 
     public BrowseSource(String DBpath,
@@ -674,6 +661,28 @@ class BrowseSource
         this.field = field;
         this.dropChars = dropChars;
         this.normalizer = normalizer;
+    }
+
+    // Get a HeadingsDB instance.  Caller is expected to call `queryFinished` on
+    // this when done with the instance.
+    public synchronized HeadingsDB getHeadingsDB() {
+        if (headingsDB == null) {
+            headingsDB = new HeadingsDB (this.DBpath, this.normalizer);
+        }
+
+        // If no queries are running, it's a safepoint to reopen the browse index.
+        if (loanCount <= 0) {
+            headingsDB.reopenIfUpdated();
+            loanCount = 0;
+        }
+
+        loanCount += 1;
+
+        return headingsDB;
+    }
+
+    public synchronized void returnHeadingsDB(HeadingsDB headingsDB) {
+        loanCount -= 1;
     }
 }
 
@@ -808,7 +817,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
         authCoreName = solrParams.get("authCoreName", DFLT_AUTH_CORE_NAME);
 
-        sources = new HashMap<> ();
+        sources = new ConcurrentHashMap<> ();
 
         for (String source : Arrays.asList(solrParams.get
                                            ("sources").split(","))) {
@@ -878,54 +887,48 @@ public class BrowseRequestHandler extends RequestHandlerBase
         //Must decrement RefCounted when finished!
         RefCounted<SolrIndexSearcher> authSearcherRef = authCore.getSearcher();
 
+        HeadingsDB headingsDB = null;
+
         try {
+            headingsDB = source.getHeadingsDB();
             SolrIndexSearcher authSearcher = authSearcherRef.get();
 
-            synchronized (this) {
-                if (source.browse == null) {
-                    source.browse = (new Browse
-                                     (new HeadingsDB(source.DBpath, source.normalizer),
-                                      new AuthDB
-                                      (authSearcher,
-                                       solrParams.get("preferredHeadingField"),
-                                       solrParams.get("useInsteadHeadingField"),
-                                       solrParams.get("seeAlsoHeadingField"),
-                                       solrParams.get("scopeNoteField"))));
-                    Log.info("new browse source with HeadingsDB (" + source.DBpath + ", " + source.normalizer + ")");
-                }
+            Browse browse = new Browse(headingsDB,
+                                       new BibDB(req.getSearcher(), source.field),
+                                       new AuthDB
+                                       (authSearcher,
+                                        solrParams.get("preferredHeadingField"),
+                                        solrParams.get("useInsteadHeadingField"),
+                                        solrParams.get("seeAlsoHeadingField"),
+                                        solrParams.get("scopeNoteField")));
 
-                source.browse.setBibDB(new BibDB(req.getSearcher(),
-                                                 source.field));
+
+            if (from != null) {
+                rowid = (browse.getId(from));
             }
 
-            try {
-                source.browse.reopenDatabasesIfUpdated();
 
-                if (from != null) {
-                    rowid = (source.browse.getId(from));
-                }
+            Log.info("Browsing from: " + rowid);
 
+            BrowseList list = browse.getList(rowid, offset, rows, extras);
 
-                Log.info("Browsing from: " + rowid);
+            Map<String,Object> result = new HashMap<>();
 
-                BrowseList list = source.browse.getList(rowid, offset, rows, extras);
+            result.put("totalCount", list.totalCount);
+            result.put("items", list.asMap());
+            result.put("startRow", rowid);
+            result.put("offset", offset);
 
-                Map<String,Object> result = new HashMap<> ();
+            new MatchTypeResponse(from, list, rowid, rows, offset, NormalizerFactory.getNormalizer(source.normalizer)).addTo(result);
 
-                result.put("totalCount", list.totalCount);
-                result.put("items", list.asMap());
-                result.put("startRow", rowid);
-                result.put("offset", offset);
-
-                new MatchTypeResponse(from, list, rowid, rows, offset, NormalizerFactory.getNormalizer(source.normalizer)).addTo(result);
-
-                rsp.add("Browse", result);
-            } finally {
-                source.browse.queryFinished();
-            }
+            rsp.add("Browse", result);
         } finally {
             //Must decrement RefCounted when finished!
             authSearcherRef.decref();
+
+            if (headingsDB != null) {
+                source.returnHeadingsDB(headingsDB);
+            }
         }
     }
 
