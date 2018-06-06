@@ -162,28 +162,37 @@ public class PrintBrowseHeadings
         PrintWriter out = new PrintWriter(new FileWriter(outFile));
 
         if (authPath != null) {
-            nonprefAuthLeech = new Leech(authPath,
-                                         System.getProperty("field.insteadof",
-                                                 "insteadOf"));
+            try {
+                nonprefAuthLeech = new Leech(authPath,
+                                             System.getProperty("field.insteadof",
+                                                     "insteadOf"));
+            } catch (IndexNotFoundException e) {
+                // If no data has been written to the index yet, this exception
+                // might get thrown; in that case, we should skip loading authority
+                // data rather than breaking the whole indexing process.
+                nonprefAuthLeech = null;
+            }
 
-            IndexReader authReader = DirectoryReader.open(FSDirectory.open(new File(authPath).toPath()));
-            authSearcher = new IndexSearcher(authReader);
+            if (nonprefAuthLeech != null) {
+                IndexReader authReader = DirectoryReader.open(FSDirectory.open(new File(authPath).toPath()));
+                authSearcher = new IndexSearcher(authReader);
 
-            loadHeadings(nonprefAuthLeech, out,
-            new Predicate() {
-                public boolean isSatisfiedBy(Object obj) {
-                    String heading = (String) obj;
+                loadHeadings(nonprefAuthLeech, out,
+                new Predicate() {
+                    public boolean isSatisfiedBy(Object obj) {
+                        String heading = (String) obj;
 
-                    try {
-                        return isLinkedFromBibData(heading);
-                    } catch (IOException e) {
-                        return true;
+                        try {
+                            return isLinkedFromBibData(heading);
+                        } catch (IOException e) {
+                            return true;
+                        }
                     }
                 }
-            }
-                        );
+                            );
 
-            nonprefAuthLeech.dropOff();
+                nonprefAuthLeech.dropOff();
+            }
         }
 
         loadHeadings(bibLeech, out, null);
