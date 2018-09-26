@@ -123,7 +123,7 @@ class HeadingsDB
     {
         try {
             this.path = path;
-            normalizer = NormalizerFactory.getNormalizer ();
+            normalizer = NormalizerFactory.getNormalizer();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -223,8 +223,8 @@ class HeadingsDB
 
 
     public synchronized HeadingSlice getHeadings(int rowid,
-                                                 int rows)
-        throws Exception
+            int rows)
+    throws Exception
     {
         HeadingSlice result = new HeadingSlice();
 
@@ -433,12 +433,12 @@ class BibDB
     {
         TermQuery q = new TermQuery(new Term(field, heading));
 
-	// bibinfo values are List<Collection> because some extra fields 
-	// may be multi-valued.
-	// Note: it may be time for bibinfo to become a class...
+        // bibinfo values are List<Collection> because some extra fields
+        // may be multi-valued.
+        // Note: it may be time for bibinfo to become a class...
         final Map<String, List<Collection<String>>> bibinfo = new HashMap<> ();
-        bibinfo.put ("ids", new ArrayList<Collection<String>> ());
-        final String[] bibExtras = extras.split (":");
+        bibinfo.put("ids", new ArrayList<Collection<String>> ());
+        final String[] bibExtras = extras.split(":");
         for (String bibField : bibExtras) {
             bibinfo.put(bibField, new ArrayList<Collection<String>> ());
         }
@@ -495,72 +495,6 @@ class BibDB
 }
 
 
-
-class BrowseList
-{
-    public int totalCount;
-    public List<BrowseItem> items = new ArrayList<> ();
-
-
-    public List<Map<String, Object>> asMap()
-    {
-        List<Map<String, Object>> result = new ArrayList<> ();
-
-        for (BrowseItem item : items) {
-            result.add(item.asMap());
-        }
-
-        return result;
-    }
-}
-
-
-
-class BrowseItem
-{
-    public List<String> seeAlso = new ArrayList<> ();
-    public List<String> useInstead = new ArrayList<> ();
-    public String note = "";
-    public String sort_key;
-    public String heading;
-    public List<String> ids;
-    public Map<String, List<Collection<String>>> extras = new HashMap<> ();
-    int count;
-
-
-    public BrowseItem(String sort_key, String heading)
-    {
-        this.sort_key = sort_key;
-        this.heading = heading;
-    }
-
-    // ids are gathered into List<Collection<String>>, see bibinfo in
-    // BibDB.matchingIDs() and populateItem().
-    public void setIds(List<Collection<String>> idList)
-    {
-        ids = new ArrayList<String> ();
-        for (Collection<String> idCol : idList) {
-            ids.addAll(idCol);
-        }
-        this.ids = ids;
-    }
-
-    public Map<String, Object> asMap()
-    {
-        Map<String, Object> result = new HashMap<> ();
-
-        result.put("sort_key", sort_key);
-        result.put("heading", heading);
-        result.put("seeAlso", seeAlso);
-        result.put("useInstead", useInstead);
-        result.put("note", note);
-        result.put("count", new Integer(count));
-        result.put("ids", ids);
-        result.put("extras", extras);
-
-        return result;
-    }
-}
 
 
 
@@ -640,7 +574,6 @@ class Browse
 }
 
 
-
 class BrowseSource
 {
     public String DBpath;
@@ -665,9 +598,10 @@ class BrowseSource
 
     // Get a HeadingsDB instance.  Caller is expected to call `queryFinished` on
     // this when done with the instance.
-    public synchronized HeadingsDB getHeadingsDB() {
+    public synchronized HeadingsDB getHeadingsDB()
+    {
         if (headingsDB == null) {
-            headingsDB = new HeadingsDB (this.DBpath, this.normalizer);
+            headingsDB = new HeadingsDB(this.DBpath, this.normalizer);
         }
 
         // If no queries are running, it's a safepoint to reopen the browse index.
@@ -681,108 +615,16 @@ class BrowseSource
         return headingsDB;
     }
 
-    public synchronized void returnHeadingsDB(HeadingsDB headingsDB) {
+    public synchronized void returnHeadingsDB(HeadingsDB headingsDB)
+    {
         loanCount -= 1;
     }
 }
 
 
-class MatchTypeResponse
-{
-    private String from;
-    private BrowseList results;
-    private int rows, offset, rowid;
-    private Normalizer normalizer;
-
-    public MatchTypeResponse(String from, BrowseList results, int rowid, int rows, int offset, Normalizer normalizer)
-    {
-        this.from = from;
-        this.results = results;
-        this.rows = rows;
-        this.rowid = rowid;
-        this.offset = offset;
-        this.normalizer = normalizer;
-    }
-
-
-    public enum MatchType {
-        EXACT,
-        HEAD_OF_STRING,
-        NONE
-    };
-
-
-    private MatchType calculateMatchType(String heading, String query)
-    {
-        byte[] normalizedQuery = normalizer.normalize(query);
-        byte[] normalizedHeading = normalizer.normalize(heading);
-
-        if (Arrays.equals(normalizedQuery, normalizedHeading)) {
-            return MatchType.EXACT;
-        }
-
-        if (heading.length() > 0) {
-            for (int i = 1; i < heading.length(); i++) {
-                byte[] normalizedHeadingPrefix = normalizer.normalize(heading.substring(0, i));
-                if (Arrays.equals(normalizedQuery, normalizedHeadingPrefix)) {
-                    return MatchType.HEAD_OF_STRING;
-                }
-            }
-        }
-
-        return MatchType.NONE;
-    }
-
-
-    public void addTo(Map<String,Object> solrResponse)
-    {
-
-        // Assume no match
-        solrResponse.put("matchType", MatchType.NONE.toString());
-
-        if (rows == 0) {
-            return;
-        }
-
-        int adjustedOffset = offset;
-
-        if ((rowid + offset) < 1) {
-            // Our (negative) offset points before the beginning of the browse
-            // list.  Set it to point to the beginning of the browse list.
-            int distanceToStartOfBrowseList = rowid - 1;
-            adjustedOffset = Math.max(adjustedOffset, -distanceToStartOfBrowseList);
-        }
-
-        if (from == null || "".equals(from)) {
-            return;
-        }
-
-        if (adjustedOffset < 0 && (adjustedOffset + rows) <= 0) {
-            // We're on a page before our matched heading
-            return;
-        }
-
-        if (adjustedOffset > 0) {
-            // We're on a page after our matched heading
-            return;
-        }
-
-        if (results.items.isEmpty()) {
-            // No results
-            return;
-        }
-
-        int matched_item_index = Math.min(Math.abs(adjustedOffset),
-                                          results.items.size() - 1);
-
-
-        BrowseItem matched_item = results.items.get(matched_item_index);
-        String matched_heading = matched_item.sort_key;
-        solrResponse.put("matchType", calculateMatchType(matched_heading, from).toString());
-    }
-}
-
-
+/*
+ * TODO: Update JavaDoc to document browse query parameters.
+ */
 /**
  * Handles the browse request: looks up the heading, consults the biblio core number of hits
  * and the authority core for cross references.
@@ -843,6 +685,18 @@ public class BrowseRequestHandler extends RequestHandlerBase
         }
     }
 
+    /*
+     *  TODO: Research question:
+     *  Should we convert result from HashMap to Solr util classes
+     *  org.apache.solr.common.util.NamedList or
+     *  org.apache.solr.common.util.SimpleOrderedMap?
+     *  Same question for BrowseList and other returned object.
+     *  
+     *  Is it worth porting to the Solr classes used for results?
+     *  The javadoc for NamedList says it gives better access by index while
+     *  preserving the order of elements, not so for HashMap.
+     */
+
 
     @Override
     public void handleRequestBody(org.apache.solr.request.SolrQueryRequest req,
@@ -869,10 +723,16 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
         int offset = (p.get("offset") != null) ? asInt(p.get("offset")) : 0;
 
+        /*
+         * TODO: invalid row parameter should return a 400 error
+         */
         if (rows < 0) {
             throw new Exception("Invalid value for parameter: rows");
         }
-
+        
+        /*
+         * TODO: invalid or missing source parameter should return a 400 error
+         */
         if (sourceName == null || !sources.containsKey(sourceName)) {
             throw new Exception("Need a (valid) source parameter.");
         }
