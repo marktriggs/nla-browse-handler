@@ -17,7 +17,7 @@ import org.apache.solr.search.SolrIndexSearcher;
  * Interface to the Solr Authority DB
  *
  */
-class AuthDB
+public class AuthDB
 {
     static int MAX_PREFERRED_HEADINGS = 1000;
 
@@ -32,7 +32,6 @@ class AuthDB
                   String useInsteadField,
                   String seeAlsoField,
                   String noteField)
-    throws Exception
     {
         searcher = authSearcher;
         preferredHeadingField = preferredField;

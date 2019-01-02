@@ -22,7 +22,7 @@ import org.apache.lucene.search.TotalHitCountCollector;
  * Interface to the Solr biblio db
  *
  */
-class BibDB
+public class BibDB
 {
     private IndexSearcher db;
     private String field;
