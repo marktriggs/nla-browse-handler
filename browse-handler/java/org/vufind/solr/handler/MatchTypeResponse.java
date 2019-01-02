@@ -3,7 +3,6 @@ package org.vufind.solr.handler;
 import java.util.Arrays;
 import java.util.Map;
 
-import org.vufind.solr.handler.MatchTypeResponse.MatchType;
 import org.vufind.util.Normalizer;
 
 public class MatchTypeResponse
@@ -86,17 +85,17 @@ public class MatchTypeResponse
             return;
         }
 
-        if (results.items.isEmpty()) {
+        if (results.isEmpty()) {
             // No results
             return;
         }
 
         int matched_item_index = Math.min(Math.abs(adjustedOffset),
-                                          results.items.size() - 1);
+                                          results.size() - 1);
 
 
-        BrowseItem matched_item = results.items.get(matched_item_index);
-        String matched_heading = matched_item.sort_key;
+        BrowseItem matched_item = results.get(matched_item_index);
+        String matched_heading = matched_item.getSortKey();
         solrResponse.put("matchType", calculateMatchType(matched_heading, from).toString());
     }
 }

@@ -2,15 +2,7 @@ package org.vufind.solr.handler;
 
 import static org.junit.Assert.*;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.Ignore;
-
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -137,9 +129,9 @@ public class BrowseHighlightingTest
     }
 
 
-    private List<BrowseItem> fakeBrowseItems(String[] headings)
+    private BrowseList fakeBrowseItems(String[] headings)
     {
-        List<BrowseItem> result = new ArrayList<BrowseItem>();
+        BrowseList result = new BrowseList();
 
         for (String heading : headings) {
             result.add(new BrowseItem(heading, heading));
@@ -152,7 +144,7 @@ public class BrowseHighlightingTest
     private BrowseList fakeBrowseResults(String ... headings)
     {
         BrowseList result = new BrowseList();
-        result.items = fakeBrowseItems(headings);
+        result = fakeBrowseItems(headings);
         return result;
     }
 

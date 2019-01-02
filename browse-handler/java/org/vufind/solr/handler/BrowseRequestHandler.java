@@ -7,27 +7,7 @@ package org.vufind.solr.handler;
 
 
 
-import org.apache.lucene.document.Document;
-import org.apache.lucene.index.LeafReaderContext;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.search.Collector;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Scorer;
-import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.TotalHitCountCollector;
-import org.apache.solr.handler.*;
-import org.apache.solr.request.*;
-import org.apache.solr.search.SolrIndexSearcher;
-import org.apache.solr.util.RefCounted;
-import org.apache.solr.common.params.SolrParams;
-import org.apache.solr.common.util.NamedList;
-import org.apache.solr.core.CoreContainer;
-import org.apache.solr.core.CoreDescriptor;
-import org.apache.solr.core.SolrCore;
-
 import java.io.File;
-import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -38,24 +18,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.vufind.util.*;
-import org.apache.lucene.search.SimpleCollector;
-import org.apache.lucene.document.Document;
-
-import java.util.logging.Logger;
-
+import org.apache.solr.common.params.SolrParams;
+import org.apache.solr.common.util.NamedList;
+import org.apache.solr.core.CoreContainer;
+import org.apache.solr.core.CoreDescriptor;
+import org.apache.solr.core.SolrCore;
+import org.apache.solr.handler.RequestHandlerBase;
+import org.apache.solr.request.SolrRequestHandler;
+import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.util.RefCounted;
 import org.vufind.util.Normalizer;
 import org.vufind.util.NormalizerFactory;
-import org.vufind.util.BrowseEntry;
-
-
-
 
 class HeadingSlice
 {
@@ -71,6 +48,7 @@ class HeadingsDB
     Connection db;
     String path;
     long dbVersion;
+    /** The total number of headings in this DB. */
     int totalCount;
     Normalizer normalizer;
 
@@ -224,48 +202,52 @@ class HeadingsDB
 }
 
 
-
-
-
+/**
+ * Class that performs the alphabetical browse of an index and produces a {@code BrowseList} object.
+ *
+ */
 class Browse
 {
     private HeadingsDB headingsDB;
     private AuthDB authDB;
     private BibDB bibDB;
+    private int maxBibListSize;
 
-    public Browse(HeadingsDB headings, BibDB bibdb, AuthDB auth)
+    public Browse(HeadingsDB headings, BibDB bibdb, AuthDB auth, boolean retrieveBibId, int maxBibListSize)
     {
-        headingsDB = headings;
-        authDB = auth;
-        bibDB = bibdb;
+        this.headingsDB = headings;
+        this.authDB = auth;
+        this.bibDB = bibdb;
+        this.maxBibListSize = maxBibListSize;
     }
 
-    private void populateItem(BrowseItem item, String extras) throws Exception
+    private void populateItem(BrowseItem item, String fields) throws Exception
     {
-        Map<String, List<Collection<String>>> bibinfo = bibDB.matchingIDs(item.heading, extras);
-        //item.ids = bibinfo.get ("ids");
-        item.setIds(bibinfo.get("ids"));
-        bibinfo.remove("ids");
-        item.count = item.ids.size();
+        Map<String, List<Collection<String>>> bibinfo =
+            bibDB.matchingExtras(item.getHeading(), fields, maxBibListSize);
+        item.setExtras(bibinfo);
+        item.setCount(bibDB.recordCount(item.getHeading()));
 
-        item.extras = bibinfo;
+        Map<String, List<String>> authFields = authDB.getFields(item.getHeading());
 
-        Map<String, List<String>> fields = authDB.getFields(item.heading);
-
-        for (String value : fields.get("seeAlso")) {
+        List<String> seeAlsoList = new ArrayList<String>();
+        for (String value : authFields.get("seeAlso")) {
             if (bibDB.recordCount(value) > 0) {
-                item.seeAlso.add(value);
+                seeAlsoList.add(value);
             }
         }
+        item.setSeeAlso(seeAlsoList);
 
-        for (String value : fields.get("useInstead")) {
+        List<String> useInsteadList = new ArrayList<String>();
+        for (String value : authFields.get("useInstead")) {
             if (bibDB.recordCount(value) > 0) {
-                item.useInstead.add(value);
+                useInsteadList.add(value);
             }
         }
+        item.setUseInstead(useInsteadList);
 
-        for (String value : fields.get("note")) {
-            item.note = value;
+        for (String value : authFields.get("note")) {
+            item.setNote(value);
         }
     }
 
@@ -294,7 +276,7 @@ class Browse
 
             populateItem(item, extras);
 
-            result.items.add(item);
+            result.add(item);
         }
 
         return result;
@@ -308,6 +290,8 @@ class BrowseSource
     public String field;
     public String dropChars;
     public String normalizer;
+    public boolean retrieveBibId;
+    public int maxBibListSize;
 
     private HeadingsDB headingsDB = null;
     private long loanCount = 0;
@@ -316,12 +300,16 @@ class BrowseSource
     public BrowseSource(String DBpath,
                         String field,
                         String dropChars,
-                        String normalizer)
+                        String normalizer,
+                        boolean retrieveBibId,
+                        int maxBibListSize)
     {
         this.DBpath = DBpath;
         this.field = field;
         this.dropChars = dropChars;
         this.normalizer = normalizer;
+        this.retrieveBibId = retrieveBibId;
+        this.maxBibListSize = maxBibListSize;
     }
 
     // Get a HeadingsDB instance.  Caller is expected to call `queryFinished` on
@@ -332,7 +320,7 @@ class BrowseSource
             headingsDB = new HeadingsDB(this.DBpath, this.normalizer);
         }
 
-        // If no queries are running, it's a safepoint to reopen the browse index.
+        // If no queries are running, it's a safe point to reopen the browse index.
         if (loanCount <= 0) {
             headingsDB.reopenIfUpdated();
             loanCount = 0;
@@ -394,11 +382,21 @@ public class BrowseRequestHandler extends RequestHandlerBase
             @SuppressWarnings("unchecked")
             NamedList<String> entry = (NamedList<String>)args.get(source);
 
+            // TODO: what if maxBibListSize is not set?
+            int maxBibListSize = 0;
+            try {
+                maxBibListSize = Integer.parseInt(entry.get("maxBibListSize"));
+            } catch (NumberFormatException e) {
+                // badly formatted param, leave as default -1
+            }
             sources.put(source,
                         new BrowseSource(entry.get("DBpath"),
                                          entry.get("field"),
                                          entry.get("dropChars"),
-                                         entry.get("normalizer")));
+                                         entry.get("normalizer"),
+                                         // defaults to false if not set or malformed
+                                         Boolean.parseBoolean(entry.get("retrieveBibId")),
+                                         maxBibListSize));
         }
     }
 
@@ -419,7 +417,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
      *  org.apache.solr.common.util.NamedList or
      *  org.apache.solr.common.util.SimpleOrderedMap?
      *  Same question for BrowseList and other returned object.
-     *  
+     *
      *  Is it worth porting to the Solr classes used for results?
      *  The javadoc for NamedList says it gives better access by index while
      *  preserving the order of elements, not so for HashMap.
@@ -435,12 +433,8 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
         String sourceName = p.get("source");
         String from = p.get("from");
-        String extras = p.get("extras");
-
-        // extras needs to be a non-null string
-        if (extras == null) {
-            extras = "";
-        }
+        // TODO: change parameter name to "fields" for VF 6.0
+        String fields = p.get("extras");
 
         int rowid = 1;
         if (p.get("rowid") != null) {
@@ -457,7 +451,7 @@ public class BrowseRequestHandler extends RequestHandlerBase
         if (rows < 0) {
             throw new Exception("Invalid value for parameter: rows");
         }
-        
+
         /*
          * TODO: invalid or missing source parameter should return a 400 error
          */
@@ -488,8 +482,10 @@ public class BrowseRequestHandler extends RequestHandlerBase
                                         solrParams.get("preferredHeadingField"),
                                         solrParams.get("useInsteadHeadingField"),
                                         solrParams.get("seeAlsoHeadingField"),
-                                        solrParams.get("scopeNoteField")));
-
+                                        solrParams.get("scopeNoteField")),
+                                       source.retrieveBibId,
+                                       source.maxBibListSize);
+            Log.info("new browse source with HeadingsDB (" + source.DBpath + ", " + source.normalizer + ")");
 
             if (from != null) {
                 rowid = (browse.getId(from));
@@ -498,12 +494,12 @@ public class BrowseRequestHandler extends RequestHandlerBase
 
             Log.info("Browsing from: " + rowid);
 
-            BrowseList list = browse.getList(rowid, offset, rows, extras);
+            BrowseList list = browse.getList(rowid, offset, rows, fields);
 
             Map<String,Object> result = new HashMap<>();
 
             result.put("totalCount", list.totalCount);
-            result.put("items", list.asMap());
+            result.put("items", list);
             result.put("startRow", rowid);
             result.put("offset", offset);
 

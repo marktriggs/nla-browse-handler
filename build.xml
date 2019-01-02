@@ -36,6 +36,9 @@
       <include name="**/*.jar"/>
     </fileset>
   </path>
+  <!-- Can be useful for debugging -->
+  <!-- Must comment out before pushing, as CI environment will not have run setup before all paths are referenced -->
+  <!-- <pathconvert property="classpathProp" refid="classpath"/> -->
 
   <target name="setup">
     <mkdir dir="${builddir}"/>
@@ -174,7 +177,11 @@
       </exec>
     </target>
 
-    <target name="test" depends="build, setup-test-cores">
+  <!-- ================================= 
+          target: test-main              
+         ================================= -->
+    <target name="test-main"
+      description="Run tests, assumes build is current and test cores are set up">
       <mkdir dir="${testdir}"/>
       <mkdir dir="${testoutputdir}"/>
       <mkdir dir="${testdir}/report"/>
@@ -215,4 +222,21 @@
       </echo>
 
     </target>
+
+  <!-- ================================= 
+          target: test              
+         ================================= -->
+    <target name="test" depends="build, setup-test-cores"
+      description="Run tests after build and setting up the test cores">
+        <antcall target="test-main"/>
+    </target>
+
+  <!-- ================================= 
+          target: test-skip-setup              
+         ================================= -->
+    <target name="test-skip-setup" depends="build"
+      description="Run tests after build, assumes test cores are already set up">
+        <antcall target="test-main"/>
+    </target>
+
   </project>

@@ -5,21 +5,16 @@
 
 package org.vufind.solr.handler.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.System;
-import java.util.logging.Logger;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.logging.Logger;
 
 import org.apache.solr.client.solrj.SolrClient;
-import org.apache.solr.client.solrj.SolrRequest;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.common.params.ModifiableSolrParams;
@@ -27,18 +22,12 @@ import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.core.CoreContainer;
 import org.apache.solr.core.SolrCore;
-import org.apache.solr.handler.component.SearchComponent;
-import org.apache.solr.request.LocalSolrQueryRequest;
-import org.apache.solr.request.SolrQueryRequest;
-import org.apache.solr.request.SolrRequestHandler;
-import org.apache.solr.response.QueryResponseWriter;
-import org.apache.solr.response.SolrQueryResponse;
-import org.apache.solr.response.XMLResponseWriter;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-
+import org.vufind.solr.handler.BrowseItem;
+import org.vufind.solr.handler.BrowseList;
 import org.vufind.solr.handler.MatchTypeResponse.MatchType;
 import org.vufind.solr.handler.client.solrj.BrowseRequest;
 import org.vufind.solr.handler.client.solrj.BrowseResponse;
@@ -54,13 +43,19 @@ public class BrowseHandlerTest
     public static String browseHandlerName = "/browse";
 
     private static final Logger logger = Logger.getGlobal();
-    
+
+    public static void checkLogger()
+    {
+        System.out.println(String.format("#### checkLogger: logger = %s", logger));
+    }
     /*
      * PREPARE AND TEAR DOWN FOR TESTS
      */
     @BeforeClass
     public static void prepareClass() throws Exception
     {
+        checkLogger();
+
         String solrHomeProp = "solr.solr.home";
         System.out.println(solrHomeProp + "= " + System.getProperty(solrHomeProp));
         // create the core container from the solr.home system property
@@ -120,11 +115,11 @@ public class BrowseHandlerTest
     /**
      * Test the search component here or just trigger it to debug
      */
-    @Ignore
     @Test
     public void testBrowseHandler()
     {
         /* EXPLORE */
+        /*
         org.apache.solr.core.PluginBag<SolrRequestHandler> handlerBag = bibCore.getRequestHandlers();
         Map<String,org.apache.solr.core.PluginBag.PluginHolder<SolrRequestHandler>> registry = handlerBag.getRegistry();
         Set<String> keys = registry.keySet();
@@ -132,43 +127,61 @@ public class BrowseHandlerTest
         for (String k : keys) {
             logger.info("key: " + k);
         }
+        */
 
         /* PREPARE */
         /* Example param string:
          * json.nl=arrarr&offset=0&extras=author:format:publishDate&from=abu+nazzarah&source=title&rows=60&wt=json
          */
-        //SolrRequestHandler browseHandler = bibCore.getRequestHandler(browseHandlerName);
-        SolrQueryResponse response = new SolrQueryResponse();
-        NamedList params = new NamedList();
-        params.add("json.nl", "arrarr");
-        params.add("wt","json");
-        params.add("offset","0");
-        params.add("rows","5");
-        params.add("source","title");
-        params.add("from","a");
-        params.add("extras","author:format:publishDate");
+        int offset = 0;
+        int rows = 5;
+        String extras = "author:format:publishDate";
+
+        NamedList<String> paramList = new NamedList<String>();
+        paramList.add("json.nl", "arrarr");
+        paramList.add("wt","json");
+        paramList.add("offset", Integer.toString(offset));
+        paramList.add("rows", Integer.toString(rows));
+        paramList.add("source","title");
+        paramList.add("from","a");
+        paramList.add("extras", extras);
+        SolrParams params = SolrParams.toSolrParams(paramList);
 
         /* RUN */
         // do something with your search component
-/*        try (LocalSolrQueryRequest request =
-                        new LocalSolrQueryRequest(bibCore,params);
-                    PrintWriter outWriter = new PrintWriter(System.out)
-                ) {
-            browseHandler.handleRequest(request,response);
-            QueryResponseWriter responseWriter = bibCore.getQueryResponseWriter(request);
-            try {
-                outWriter.write("Request response:\n");
-                responseWriter.write(outWriter, request, response);
-            } catch (java.io.IOException e) {
-                logger.info("ERROR writing response: Cause: " + e.getCause() +
-                            "; Message:" + e.getMessage());
+        try {
+            BrowseRequest req = new BrowseRequest(params);
+            BrowseResponse res = req.process(bibClient);
+            NamedList<Object> response = res.getResponse();
+            logger.info("Response: " + response.toString());
+
+            @SuppressWarnings("unchecked")
+            Map<String,Object> responseBrowse = (Map<String, Object>) response.get("Browse");
+            //assertEquals(Integer.toString(offset), responseBrowse.get("offset"));
+            assertTrue(offset == (int) responseBrowse.get("offset"));
+
+            int totalCount = (int) responseBrowse.get("totalCount");
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> itemList = (List<Map<String, Object>>) responseBrowse.get("items");
+            BrowseList items = new BrowseList(itemList, totalCount);
+            assertTrue(String.format("Expected BrowseList of %d items, but %d were returned", rows, items.size()),
+                       rows == items.size());
+            for (BrowseItem item : items) {
+                Map<String, List<Collection<String>>> extrasMap = item.getExtras();
+                for (String field : extras.split(":")) {
+                    assertNotNull(String.format("missing field %s in item extras: %s", field, item),
+                                  extrasMap.get(field));
+                }
             }
+        } catch (SolrServerException | IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
-*/
+
         /* CHECK */
         // check results with asserts :)
     }
-    
+
     @Test
     public void testBrowseHandler_HeadOfStringMatch()
     {

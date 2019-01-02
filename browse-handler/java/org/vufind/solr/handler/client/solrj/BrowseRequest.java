@@ -10,9 +10,10 @@ import org.apache.solr.common.params.SolrParams;
  * This is a SolrJ class for ease of querying the BrowseRequestHandler.
  * Currently used only for testing, but possibly of more general use.
  *
- * @author tod
+ * @author Tod Olson <tod@uchicago.edu>
  *
  */
+@SuppressWarnings("serial")
 public class BrowseRequest extends SolrRequest<BrowseResponse>
 {
 
